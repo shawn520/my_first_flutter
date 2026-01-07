@@ -21,7 +21,7 @@ jobs:
         with:
           # 关键修改：升级Flutter版本到3.19.6（对应Dart 3.3.4不行，直接升到3.22.0+）
           # 推荐用3.22.0（绑定Dart 3.4.0）或3.24.0（绑定Dart 3.5.0），满足^3.10.4要求
-          flutter-version: '3.24.0' 
+          flutter-version: '3.38.5' 
           cache: true  # 缓存Flutter依赖，加速构建
           channel: 'stable'  # 使用稳定版
 

@@ -47,7 +47,7 @@ jobs:
       - name: Package Windows build to ZIP
         run: |
           $zipFileName = "flutter_windows_app_${{ github.sha }}.zip"
-          Compress-Archive -Path build\windows\runner\Release\* -DestinationPath $zipFileName
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath $zipFileName
           echo "ZIP_FILE_NAME=$zipFileName" >> $env:GITHUB_ENV
         shell: pwsh
 

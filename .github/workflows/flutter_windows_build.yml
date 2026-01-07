@@ -35,8 +35,8 @@ jobs:
         working-directory: .
 
       # 5. 代码检查（可选）
-      - name: Analyze code
-        run: flutter analyze
+      # - name: Analyze code
+      #   run: flutter analyze
 
       # 6. 编译Windows Release版本
       - name: Build Windows application

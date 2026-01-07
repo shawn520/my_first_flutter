@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/settings_provider.dart';
+import 'change_password_dialog.dart';
 
 class SettingsDialog extends ConsumerWidget {
   const SettingsDialog({super.key});
@@ -74,6 +75,25 @@ class SettingsDialog extends ConsumerWidget {
               onSelectionChanged: (Set<ThemeMode> selected) {
                 ref.read(settingsProvider.notifier).setThemeMode(selected.first);
               },
+            ),
+            const SizedBox(height: 24),
+
+            // Change password
+            const Divider(),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  showDialog(
+                    context: context,
+                    builder: (context) => const ChangePasswordDialog(),
+                  );
+                },
+                icon: const Icon(Icons.key),
+                label: Text(l10n.changePassword),
+              ),
             ),
           ],
         ),

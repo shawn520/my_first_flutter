@@ -140,6 +140,14 @@ abstract class AppLocalizations {
   String get themeSystem;
   String get chinese;
   String get english;
+  String get changePassword;
+  String get currentPassword;
+  String get newPassword;
+  String get confirmNewPassword;
+  String get passwordChanged;
+  String get currentPasswordWrong;
+  String get newPasswordTooShort;
+  String get newPasswordsDoNotMatch;
 
   // Common
   String get delete;
@@ -428,6 +436,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chinese => '中文';
   @override
   String get english => 'English';
+  @override
+  String get changePassword => '修改主密码';
+  @override
+  String get currentPassword => '当前密码';
+  @override
+  String get newPassword => '新密码';
+  @override
+  String get confirmNewPassword => '确认新密码';
+  @override
+  String get passwordChanged => '密码修改成功';
+  @override
+  String get currentPasswordWrong => '当前密码错误';
+  @override
+  String get newPasswordTooShort => '新密码至少4个字符';
+  @override
+  String get newPasswordsDoNotMatch => '两次新密码不一致';
 
   // Common
   @override
@@ -708,6 +732,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chinese => '中文';
   @override
   String get english => 'English';
+  @override
+  String get changePassword => 'Change Master Password';
+  @override
+  String get currentPassword => 'Current Password';
+  @override
+  String get newPassword => 'New Password';
+  @override
+  String get confirmNewPassword => 'Confirm New Password';
+  @override
+  String get passwordChanged => 'Password changed successfully';
+  @override
+  String get currentPasswordWrong => 'Current password is incorrect';
+  @override
+  String get newPasswordTooShort => 'New password must be at least 4 characters';
+  @override
+  String get newPasswordsDoNotMatch => 'New passwords do not match';
 
   // Common
   @override

@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 import 'package:drift/drift.dart';
-import 'package:drift/src/runtime/executor/executor.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/database/app_database.dart';
 import '../core/crypto/crypto_service.dart';
@@ -37,9 +36,7 @@ class DatabaseNotifier extends StateNotifier<DatabaseState> {
       final encryptionKey = CryptoService.deriveKey(masterPassword, salt);
 
       // Create database
-      final db = AppDatabase(
-        openDatabase(filePath, masterPassword) as QueryExecutor,
-      );
+      final db = AppDatabase(openDatabase(filePath));
 
       // Store metadata
       await db.setMetadata('salt', salt);
@@ -60,10 +57,10 @@ class DatabaseNotifier extends StateNotifier<DatabaseState> {
   }
 
   /// Opens an existing database and validates password
-  Future<bool> openDatabase(String filePath, String masterPassword) async {
+  Future<bool> openExistingDatabase(String filePath, String masterPassword) async {
     try {
       // Open database
-      final db = AppDatabase(openDatabaseFile(filePath));
+      final db = AppDatabase(openDatabase(filePath));
 
       // Get stored salt and hash
       final salt = await db.getMetadata('salt');
@@ -145,10 +142,5 @@ class DatabaseNotifier extends StateNotifier<DatabaseState> {
 /// Database notifier provider
 final databaseNotifierProvider =
     StateNotifierProvider<DatabaseNotifier, DatabaseState>((ref) {
-      return DatabaseNotifier(ref);
-    });
-
-/// Helper to open database file
-LazyDatabase openDatabaseFile(String path) {
-  return openDatabase(path);
-}
+  return DatabaseNotifier(ref);
+});

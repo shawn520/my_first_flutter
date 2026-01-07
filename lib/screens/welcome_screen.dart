@@ -114,7 +114,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
       final success = await ref
           .read(databaseNotifierProvider.notifier)
-          .openDatabase(_selectedPath!, password);
+          .openExistingDatabase(_selectedPath!, password);
 
       setState(() => _isLoading = false);
 

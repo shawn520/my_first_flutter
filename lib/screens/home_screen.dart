@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/database_provider.dart';
-import '../providers/groups_provider.dart';
 import '../providers/entries_provider.dart';
 import '../widgets/group_tree.dart';
 import '../widgets/entry_list.dart';

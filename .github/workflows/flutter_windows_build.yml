@@ -1,5 +1,10 @@
 name: Flutter Windows Auto Build
 
+# 关键新增：提升Token权限
+permissions:
+  contents: write  # 赋予读写仓库内容（含Release）的权限
+  packages: write  # 可选，如需操作包发布
+
 # 触发条件：push到main/master分支、创建tag、手动触发
 on:
   push:

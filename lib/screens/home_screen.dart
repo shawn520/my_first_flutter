@@ -5,6 +5,8 @@ import '../providers/entries_provider.dart';
 import '../widgets/group_tree.dart';
 import '../widgets/entry_list.dart';
 import '../widgets/entry_detail.dart';
+import '../widgets/export_dialog.dart';
+import '../widgets/import_dialog.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -28,6 +30,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _closeDatabase() {
     ref.read(databaseNotifierProvider.notifier).closeDatabase();
+  }
+
+  void _showExportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => const ExportDialog(),
+    );
+  }
+
+  void _showImportDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => const ImportDialog(),
+    );
   }
 
   @override
@@ -60,9 +76,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   tooltip: 'Close Database',
                   onPressed: _closeDatabase,
                 ),
-                const SizedBox(width: 16),
-                const VerticalDivider(width: 1),
-                const SizedBox(width: 16),
+                const SizedBox(width: 8),
+                const VerticalDivider(width: 1, thickness: 1),
+                const SizedBox(width: 8),
+
+                // Import/Export buttons
+                IconButton(
+                  icon: const Icon(Icons.file_upload_outlined),
+                  tooltip: 'Export Groups',
+                  onPressed: _showExportDialog,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.file_download_outlined),
+                  tooltip: 'Import Groups',
+                  onPressed: _showImportDialog,
+                ),
+                const SizedBox(width: 8),
+                const VerticalDivider(width: 1, thickness: 1),
+                const SizedBox(width: 8),
 
                 // Search field
                 Expanded(

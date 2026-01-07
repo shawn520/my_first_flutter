@@ -19,17 +19,39 @@ final entriesForGroupProvider = StreamProvider<List<Entry>>((ref) {
   return db.watchEntriesByGroup(groupId);
 });
 
-/// Filtered entries based on search
+/// Filtered entries based on search (supports title, url, username, notes)
 final filteredEntriesProvider = Provider<List<Entry>>((ref) {
   final entries = ref.watch(entriesForGroupProvider).value ?? [];
   final query = ref.watch(searchQueryProvider).toLowerCase();
 
   if (query.isEmpty) return entries;
 
+  final encryptionKey = ref.watch(encryptionKeyProvider);
+
   return entries.where((entry) {
-    return entry.title.toLowerCase().contains(query) ||
+    // Search in title, username, url
+    if (entry.title.toLowerCase().contains(query) ||
         entry.username.toLowerCase().contains(query) ||
-        entry.url.toLowerCase().contains(query);
+        entry.url.toLowerCase().contains(query)) {
+      return true;
+    }
+
+    // Search in decrypted notes
+    if (entry.notes.isNotEmpty && encryptionKey != null) {
+      try {
+        final decryptedNotes = CryptoService.decrypt(entry.notes, encryptionKey);
+        if (decryptedNotes.toLowerCase().contains(query)) {
+          return true;
+        }
+      } catch (e) {
+        // If decryption fails, try searching in raw notes
+        if (entry.notes.toLowerCase().contains(query)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }).toList();
 });
 

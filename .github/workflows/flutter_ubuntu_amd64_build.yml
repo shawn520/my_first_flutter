@@ -1,0 +1,105 @@
+name: Flutter Ubuntu Build (AMD64 DEB)
+
+on:
+  push:
+    branches: [ main, master, optimize_ci ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-ubuntu-amd64-deb:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. 安装AMD64专属基础依赖（无需ARM相关）
+      - name: Install base dependencies
+        run: |
+          sudo apt-get update -y
+          # 仅安装AMD64编译依赖
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev libssl-dev libgl1-mesa-dev
+          # DEB打包依赖
+          sudo apt-get install -y dpkg-dev fakeroot
+
+      # 2. 配置Flutter环境
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.5'
+          cache: true
+          channel: 'stable'
+
+      # 3. 启用Linux桌面支持
+      - name: Enable Linux desktop
+        run: flutter config --enable-linux-desktop
+
+      # 4. 获取Flutter依赖
+      - name: Get dependencies
+        run: flutter pub get
+
+      # 5. 编译AMD64版本（原生编译，无需交叉编译）
+      - name: Build Flutter Linux app (AMD64)
+        run: flutter build linux --release --dart-define=ARCH=amd64
+
+      # 6. 构建AMD64专属DEB包
+      - name: Build DEB package (AMD64)
+        run: |
+          APP_VERSION=${{ github.ref_name || github.sha }}
+          APP_VERSION=$(echo $APP_VERSION | sed 's/[^a-zA-Z0-9.+-]/-/g')
+          APP_NAME="my_flutter_app"
+          
+          # 创建DEB目录结构
+          DEB_ROOT="flutter_app_deb_amd64"
+          DEB_DIR="$DEB_ROOT/opt/$APP_NAME"
+          BIN_DIR="$DEB_ROOT/usr/bin"
+          CONTROL_DIR="$DEB_ROOT/DEBIAN"
+          
+          mkdir -p $DEB_DIR $BIN_DIR $CONTROL_DIR
+          cp -r build/linux/x64/release/bundle/* $DEB_DIR/
+          ln -s /opt/$APP_NAME/$APP_NAME $BIN_DIR/$APP_NAME
+          
+          # 编写control文件（固定AMD64架构）
+          cat > $CONTROL_DIR/control << EOF
+          Package: $APP_NAME
+          Version: $APP_VERSION
+          Architecture: amd64
+          Maintainer: Your Name <your-email@example.com>
+          Depends: libgtk-3-0:amd64, libstdc++6:amd64, libgl1-mesa-glx:amd64, libssl3:amd64
+          Section: utils
+          Priority: optional
+          Description: A Flutter application for Ubuntu (amd64)
+            Auto-built DEB package for amd64 (x86_64) architecture.
+          EOF
+          
+          chmod -R 755 $DEB_ROOT
+          chmod 644 $CONTROL_DIR/control
+          
+          DEB_PACKAGE_NAME="${APP_NAME}_${APP_VERSION}_amd64.deb"
+          fakeroot dpkg-deb --build $DEB_ROOT $DEB_PACKAGE_NAME
+          dpkg-deb -I $DEB_PACKAGE_NAME
+          echo "DEB_PACKAGE_NAME=$DEB_PACKAGE_NAME" >> $GITHUB_ENV
+
+      # 7. 上传AMD64 DEB包
+      - name: Upload AMD64 DEB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-ubuntu-deb-amd64
+          path: ${{ env.DEB_PACKAGE_NAME }}
+          retention-days: 30
+
+      # 8. 发布到GitHub Release（tag触发时）
+      - name: Create GitHub Release (AMD64)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.DEB_PACKAGE_NAME }}
+          name: Release ${{ github.ref_name }}
+          body: "Automatic Ubuntu build for ${{ github.ref_name }}\n- amd64 (x86_64) architecture: ${{ env.DEB_PACKAGE_NAME }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

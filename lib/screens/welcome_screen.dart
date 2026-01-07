@@ -86,7 +86,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
         return;
       }
 
-      if (password.length < 8) {
+      if (password.length < 4) {
         setState(() => _errorMessage = l10n.passwordTooShort);
         return;
       }

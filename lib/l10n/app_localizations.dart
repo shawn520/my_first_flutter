@@ -213,7 +213,7 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String get passwordsDoNotMatch => '两次密码不一致';
   @override
-  String get passwordTooShort => '密码至少8个字符';
+  String get passwordTooShort => '密码至少4个字符';
   @override
   String get pleaseSelectLocation => '请选择保存位置';
   @override
@@ -493,7 +493,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get passwordsDoNotMatch => 'Passwords do not match';
   @override
-  String get passwordTooShort => 'Password must be at least 8 characters';
+  String get passwordTooShort => 'Password must be at least 4 characters';
   @override
   String get pleaseSelectLocation => 'Please select a save location';
   @override

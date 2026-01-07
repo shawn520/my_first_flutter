@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_localizations.dart';
 import '../core/database/app_database.dart';
 import '../providers/entries_provider.dart';
 import '../providers/groups_provider.dart';
@@ -64,9 +65,11 @@ class _EntryEditDialogState extends ConsumerState<EntryEditDialog> {
   }
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context);
+
     if (_titleController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Title is required')),
+        SnackBar(content: Text(l10n.titleRequired)),
       );
       return;
     }
@@ -95,7 +98,7 @@ class _EntryEditDialogState extends ConsumerState<EntryEditDialog> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('${AppLocalizations.of(context).error}: $e')),
         );
       }
     } finally {
@@ -116,11 +119,11 @@ class _EntryEditDialogState extends ConsumerState<EntryEditDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final groups = ref.watch(allGroupsProvider).value ?? [];
-    final theme = Theme.of(context);
 
     return AlertDialog(
-      title: Text(_isEditing ? 'Edit Entry' : 'New Entry'),
+      title: Text(_isEditing ? l10n.editEntry : l10n.newEntry),
       content: SizedBox(
         width: 450,
         child: SingleChildScrollView(
@@ -131,10 +134,10 @@ class _EntryEditDialogState extends ConsumerState<EntryEditDialog> {
               TextField(
                 controller: _titleController,
                 autofocus: true,
-                decoration: const InputDecoration(
-                  labelText: 'Title *',
-                  prefixIcon: Icon(Icons.title),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: '${l10n.title} *',
+                  prefixIcon: const Icon(Icons.title),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 16),
@@ -142,13 +145,13 @@ class _EntryEditDialogState extends ConsumerState<EntryEditDialog> {
               // Group selector
               DropdownButtonFormField<int>(
                 value: _selectedGroupId,
-                decoration: const InputDecoration(
-                  labelText: 'Group',
-                  prefixIcon: Icon(Icons.folder),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.group,
+                  prefixIcon: const Icon(Icons.folder),
+                  border: const OutlineInputBorder(),
                 ),
                 items: [
-                  const DropdownMenuItem(
+                  DropdownMenuItem(
                     value: 1,
                     child: Text('Root'),
                   ),
@@ -170,10 +173,10 @@ class _EntryEditDialogState extends ConsumerState<EntryEditDialog> {
               // Username
               TextField(
                 controller: _usernameController,
-                decoration: const InputDecoration(
-                  labelText: 'Username',
-                  prefixIcon: Icon(Icons.person),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.username,
+                  prefixIcon: const Icon(Icons.person),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 16),
@@ -183,7 +186,7 @@ class _EntryEditDialogState extends ConsumerState<EntryEditDialog> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
-                  labelText: 'Password',
+                  labelText: l10n.password,
                   prefixIcon: const Icon(Icons.key),
                   border: const OutlineInputBorder(),
                   suffixIcon: Row(
@@ -198,7 +201,7 @@ class _EntryEditDialogState extends ConsumerState<EntryEditDialog> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.casino),
-                        tooltip: 'Generate Password',
+                        tooltip: l10n.passwordGenerator,
                         onPressed: _showPasswordGenerator,
                       ),
                     ],
@@ -210,10 +213,10 @@ class _EntryEditDialogState extends ConsumerState<EntryEditDialog> {
               // URL
               TextField(
                 controller: _urlController,
-                decoration: const InputDecoration(
-                  labelText: 'URL',
-                  prefixIcon: Icon(Icons.link),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.url,
+                  prefixIcon: const Icon(Icons.link),
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 16),
@@ -222,10 +225,10 @@ class _EntryEditDialogState extends ConsumerState<EntryEditDialog> {
               TextField(
                 controller: _notesController,
                 maxLines: 4,
-                decoration: const InputDecoration(
-                  labelText: 'Notes',
-                  prefixIcon: Icon(Icons.notes),
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.notes,
+                  prefixIcon: const Icon(Icons.notes),
+                  border: const OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
               ),
@@ -236,7 +239,7 @@ class _EntryEditDialogState extends ConsumerState<EntryEditDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: _isLoading ? null : _save,
@@ -246,7 +249,7 @@ class _EntryEditDialogState extends ConsumerState<EntryEditDialog> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : Text(_isEditing ? 'Save' : 'Create'),
+              : Text(_isEditing ? l10n.save : l10n.create),
         ),
       ],
     );

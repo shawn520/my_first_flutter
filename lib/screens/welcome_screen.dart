@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/database_provider.dart';
+import '../widgets/settings_dialog.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
@@ -70,26 +72,27 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
     final password = _passwordController.text;
 
     if (password.isEmpty) {
-      setState(() => _errorMessage = 'Please enter a master password');
+      setState(() => _errorMessage = l10n.pleaseEnterPassword);
       return;
     }
 
     if (_isCreating) {
       if (password != _confirmPasswordController.text) {
-        setState(() => _errorMessage = 'Passwords do not match');
+        setState(() => _errorMessage = l10n.passwordsDoNotMatch);
         return;
       }
 
       if (password.length < 8) {
-        setState(() => _errorMessage = 'Password must be at least 8 characters');
+        setState(() => _errorMessage = l10n.passwordTooShort);
         return;
       }
 
       if (_selectedPath == null) {
-        setState(() => _errorMessage = 'Please select a save location');
+        setState(() => _errorMessage = l10n.pleaseSelectLocation);
         return;
       }
 
@@ -102,11 +105,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       setState(() => _isLoading = false);
 
       if (!success) {
-        setState(() => _errorMessage = 'Failed to create database');
+        setState(() => _errorMessage = l10n.failedToCreateDatabase);
       }
     } else {
       if (_selectedPath == null) {
-        setState(() => _errorMessage = 'Please select a database file');
+        setState(() => _errorMessage = l10n.pleaseSelectFile);
         return;
       }
 
@@ -119,16 +122,36 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
       setState(() => _isLoading = false);
 
       if (!success) {
-        setState(() => _errorMessage = 'Invalid password or corrupted database');
+        setState(() => _errorMessage = l10n.invalidPasswordOrCorrupted);
       }
     }
   }
 
+  void _showSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => const SettingsDialog(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: l10n.settings,
+            onPressed: _showSettingsDialog,
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(32),
@@ -144,14 +167,14 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Password Manager',
+                  l10n.welcomeTitle,
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Secure your passwords locally',
+                  l10n.welcomeSubtitle,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -163,7 +186,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   FilledButton.icon(
                     onPressed: _createNewDatabase,
                     icon: const Icon(Icons.add),
-                    label: const Text('Create New Database'),
+                    label: Text(l10n.createNewDatabase),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size.fromHeight(48),
                     ),
@@ -172,7 +195,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   OutlinedButton.icon(
                     onPressed: _openExistingDatabase,
                     icon: const Icon(Icons.folder_open),
-                    label: const Text('Open Existing Database'),
+                    label: Text(l10n.openExistingDatabase),
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(48),
                     ),
@@ -186,7 +209,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            _isCreating ? 'Create New Database' : 'Open Database',
+                            _isCreating ? l10n.createNewDatabase : l10n.openExistingDatabase,
                             style: theme.textTheme.titleLarge,
                           ),
                           const SizedBox(height: 24),
@@ -196,7 +219,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                             OutlinedButton.icon(
                               onPressed: _selectSavePath,
                               icon: const Icon(Icons.save),
-                              label: Text(_selectedPath ?? 'Select Save Location'),
+                              label: Text(_selectedPath ?? l10n.selectSaveLocation),
                             ),
                             const SizedBox(height: 16),
                           ] else ...[
@@ -227,7 +250,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                             controller: _passwordController,
                             obscureText: _obscurePassword,
                             decoration: InputDecoration(
-                              labelText: 'Master Password',
+                              labelText: l10n.masterPassword,
                               prefixIcon: const Icon(Icons.key),
                               suffixIcon: IconButton(
                                 icon: Icon(_obscurePassword
@@ -248,7 +271,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                               controller: _confirmPasswordController,
                               obscureText: _obscureConfirm,
                               decoration: InputDecoration(
-                                labelText: 'Confirm Password',
+                                labelText: l10n.confirmPassword,
                                 prefixIcon: const Icon(Icons.key),
                                 suffixIcon: IconButton(
                                   icon: Icon(_obscureConfirm
@@ -303,7 +326,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                                     child: CircularProgressIndicator(
                                         strokeWidth: 2),
                                   )
-                                : Text(_isCreating ? 'Create' : 'Unlock'),
+                                : Text(_isCreating ? l10n.create : l10n.unlock),
                           ),
                           const SizedBox(height: 8),
                           TextButton(
@@ -314,7 +337,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                               _passwordController.clear();
                               _confirmPasswordController.clear();
                             }),
-                            child: const Text('Cancel'),
+                            child: Text(l10n.cancel),
                           ),
                         ],
                       ),

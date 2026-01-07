@@ -9,6 +9,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # State management
   flutter_riverpod: ^2.4.9
@@ -26,6 +28,9 @@ dependencies:
 
   # File picker
   file_picker: ^6.1.1
+
+  # Settings persistence
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:

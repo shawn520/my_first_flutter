@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:drift/drift.dart' hide Column;
 import 'package:file_picker/file_picker.dart';
+import '../l10n/app_localizations.dart';
 import '../core/database/app_database.dart';
 import '../core/export/import_service.dart';
 import '../core/export/export_service.dart';
@@ -22,7 +23,6 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
   bool _isImporting = false;
   bool _isValidating = false;
   String? _errorMessage;
-  ImportResponse? _validationResult;
   List<GroupExportData>? _previewGroups;
 
   @override
@@ -32,30 +32,32 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
   }
 
   Future<void> _selectFile() async {
+    final l10n = AppLocalizations.of(context);
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pwexp'],
-      dialogTitle: 'Select Export File',
+      dialogTitle: l10n.selectExportFile,
     );
 
     if (result != null && result.files.single.path != null) {
       setState(() {
         _selectedFilePath = result.files.single.path;
         _errorMessage = null;
-        _validationResult = null;
         _previewGroups = null;
       });
     }
   }
 
   Future<void> _validateAndPreview() async {
+    final l10n = AppLocalizations.of(context);
+
     if (_selectedFilePath == null) {
-      setState(() => _errorMessage = 'Please select a file');
+      setState(() => _errorMessage = l10n.pleaseSelectFile);
       return;
     }
 
     if (_passwordController.text.isEmpty) {
-      setState(() => _errorMessage = 'Please enter the export password');
+      setState(() => _errorMessage = l10n.pleaseEnterPassword);
       return;
     }
 
@@ -71,23 +73,43 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
       );
 
       setState(() {
-        _validationResult = result;
         if (result.isSuccess) {
           _previewGroups = result.groups;
         } else {
-          _errorMessage = result.errorMessage ?? result.result.message;
+          _errorMessage = result.errorMessage ?? _getErrorMessage(result.result, l10n);
         }
       });
     } catch (e) {
-      setState(() => _errorMessage = 'Validation failed: $e');
+      setState(() => _errorMessage = '${l10n.validationFailed}: $e');
     } finally {
       setState(() => _isValidating = false);
     }
   }
 
+  String _getErrorMessage(ImportResult result, AppLocalizations l10n) {
+    switch (result) {
+      case ImportResult.fileNotFound:
+        return l10n.fileNotFound;
+      case ImportResult.invalidFormat:
+        return l10n.invalidFileFormat;
+      case ImportResult.expired:
+        return l10n.fileExpired;
+      case ImportResult.wrongPassword:
+        return l10n.wrongPassword;
+      case ImportResult.checksumMismatch:
+        return l10n.fileCorrupted;
+      case ImportResult.error:
+        return l10n.unknownError;
+      case ImportResult.success:
+        return '';
+    }
+  }
+
   Future<void> _import() async {
+    final l10n = AppLocalizations.of(context);
+
     if (_previewGroups == null || _previewGroups!.isEmpty) {
-      setState(() => _errorMessage = 'No data to import');
+      setState(() => _errorMessage = l10n.noDataToImport);
       return;
     }
 
@@ -101,7 +123,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
       final encryptionKey = ref.read(encryptionKeyProvider);
 
       if (db == null) {
-        setState(() => _errorMessage = 'Database not available');
+        setState(() => _errorMessage = l10n.databaseNotAvailable);
         return;
       }
 
@@ -159,7 +181,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
         _showSuccessDialog(importedGroups, importedEntries);
       }
     } catch (e) {
-      setState(() => _errorMessage = 'Import failed: $e');
+      setState(() => _errorMessage = '${l10n.importFailed}: $e');
     } finally {
       if (mounted) {
         setState(() => _isImporting = false);
@@ -168,21 +190,23 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
   }
 
   void _showSuccessDialog(int groups, int entries) {
+    final l10n = AppLocalizations.of(context);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.green),
-            SizedBox(width: 8),
-            Text('Import Successful'),
+            const Icon(Icons.check_circle, color: Colors.green),
+            const SizedBox(width: 8),
+            Text(l10n.importSuccessful),
           ],
         ),
-        content: Text('Imported $groups groups with $entries entries.'),
+        content: Text(l10n.importedMessage(groups, entries)),
         actions: [
           FilledButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: Text(l10n.ok),
           ),
         ],
       ),
@@ -191,10 +215,11 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
     return AlertDialog(
-      title: const Text('Import Groups'),
+      title: Text(l10n.importGroups),
       content: SizedBox(
         width: 500,
         child: SingleChildScrollView(
@@ -204,7 +229,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
             children: [
               // File selection
               Text(
-                'Select Export File',
+                l10n.selectExportFile,
                 style: theme.textTheme.titleSmall,
               ),
               const SizedBox(height: 8),
@@ -218,7 +243,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        _selectedFilePath ?? 'No file selected',
+                        _selectedFilePath ?? l10n.noFileSelected,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: _selectedFilePath == null
@@ -232,7 +257,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
                   FilledButton.icon(
                     onPressed: _selectFile,
                     icon: const Icon(Icons.folder_open),
-                    label: const Text('Browse'),
+                    label: Text(l10n.browse),
                   ),
                 ],
               ),
@@ -240,7 +265,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
 
               // Password
               Text(
-                'Export Password',
+                l10n.exportPassword,
                 style: theme.textTheme.titleSmall,
               ),
               const SizedBox(height: 8),
@@ -248,7 +273,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
-                  hintText: 'Enter the export password',
+                  hintText: l10n.enterExportPassword,
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
                     icon: Icon(_obscurePassword
@@ -274,7 +299,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.check_circle_outline),
-                    label: Text(_isValidating ? 'Validating...' : 'Validate & Preview'),
+                    label: Text(_isValidating ? l10n.validating : l10n.validateAndPreview),
                   ),
                 ),
 
@@ -284,7 +309,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: Colors.green.withValues(alpha: 0.1),
                     border: Border.all(color: Colors.green),
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -292,16 +317,16 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
                     children: [
                       const Icon(Icons.check_circle, color: Colors.green),
                       const SizedBox(width: 8),
-                      const Text(
-                        'File validated successfully',
-                        style: TextStyle(color: Colors.green),
+                      Text(
+                        l10n.fileValidated,
+                        style: const TextStyle(color: Colors.green),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Preview (${_previewGroups!.length} groups)',
+                  l10n.previewCount(_previewGroups!.length),
                   style: theme.textTheme.titleSmall,
                 ),
                 const SizedBox(height: 8),
@@ -321,7 +346,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
                           size: 20,
                         ),
                         title: Text(group.name),
-                        subtitle: Text('${group.entries.length} entries'),
+                        subtitle: Text(l10n.items(group.entries.length)),
                         children: group.entries
                             .map((entry) => ListTile(
                                   dense: true,
@@ -336,7 +361,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Note: Duplicate group names will be automatically renamed.',
+                  l10n.duplicateGroupsRenamed,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.outline,
                   ),
@@ -373,7 +398,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed:
@@ -384,7 +409,7 @@ class _ImportDialogState extends ConsumerState<ImportDialog> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Import'),
+              : Text(l10n.import),
         ),
       ],
     );

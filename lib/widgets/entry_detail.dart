@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_localizations.dart';
 import '../core/clipboard/clipboard_service.dart';
 import '../providers/entries_provider.dart';
 import 'entry_edit_dialog.dart';
@@ -16,12 +17,13 @@ class _EntryDetailState extends ConsumerState<EntryDetail> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final entry = ref.watch(selectedEntryProvider);
     final entriesNotifier = ref.read(entriesNotifierProvider.notifier);
 
     if (entry == null) {
-      return const Center(child: Text('Select an entry'));
+      return Center(child: Text(l10n.noEntriesYet));
     }
 
     // Decrypt sensitive fields
@@ -70,12 +72,12 @@ class _EntryDetailState extends ConsumerState<EntryDetail> {
               ),
               IconButton(
                 icon: const Icon(Icons.edit),
-                tooltip: 'Edit',
+                tooltip: l10n.editEntry,
                 onPressed: () => _showEditDialog(context),
               ),
               IconButton(
                 icon: const Icon(Icons.delete),
-                tooltip: 'Delete',
+                tooltip: l10n.deleteEntry,
                 onPressed: () => _showDeleteDialog(context, ref),
               ),
             ],
@@ -84,33 +86,33 @@ class _EntryDetailState extends ConsumerState<EntryDetail> {
 
           // Username field
           _DetailField(
-            label: 'Username',
+            label: l10n.username,
             value: decrypted.username,
             icon: Icons.person,
-            onCopy: () => _copyToClipboard(context, decrypted.username, 'Username'),
+            onCopy: () => _copyToClipboard(context, decrypted.username, l10n.username),
           ),
           const SizedBox(height: 16),
 
           // Password field
           _DetailField(
-            label: 'Password',
+            label: l10n.password,
             value: _showPassword ? decrypted.password : '••••••••••••',
             icon: Icons.key,
             trailing: IconButton(
               icon: Icon(_showPassword ? Icons.visibility_off : Icons.visibility),
               onPressed: () => setState(() => _showPassword = !_showPassword),
             ),
-            onCopy: () => _copyToClipboard(context, decrypted.password, 'Password'),
+            onCopy: () => _copyToClipboard(context, decrypted.password, l10n.password),
           ),
           const SizedBox(height: 16),
 
           // URL field
           if (entry.url.isNotEmpty) ...[
             _DetailField(
-              label: 'URL',
+              label: l10n.url,
               value: entry.url,
               icon: Icons.link,
-              onCopy: () => _copyToClipboard(context, entry.url, 'URL'),
+              onCopy: () => _copyToClipboard(context, entry.url, l10n.url),
             ),
             const SizedBox(height: 16),
           ],
@@ -118,7 +120,7 @@ class _EntryDetailState extends ConsumerState<EntryDetail> {
           // Notes field
           if (decrypted.notes.isNotEmpty) ...[
             Text(
-              'Notes',
+              l10n.notes,
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.outline,
               ),
@@ -139,13 +141,13 @@ class _EntryDetailState extends ConsumerState<EntryDetail> {
 
           // Metadata
           Text(
-            'Created: ${_formatDate(entry.createdAt)}',
+            '${l10n.createdAt}: ${_formatDate(entry.createdAt)}',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.outline,
             ),
           ),
           Text(
-            'Modified: ${_formatDate(entry.updatedAt)}',
+            '${l10n.modifiedAt}: ${_formatDate(entry.updatedAt)}',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.outline,
             ),
@@ -161,10 +163,11 @@ class _EntryDetailState extends ConsumerState<EntryDetail> {
   }
 
   void _copyToClipboard(BuildContext context, String text, String label) {
+    final l10n = AppLocalizations.of(context);
     ClipboardService.copy(text);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$label copied (clears in 30s)'),
+        content: Text('$label ${l10n.copiedClears}'),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -184,18 +187,19 @@ class _EntryDetailState extends ConsumerState<EntryDetail> {
   }
 
   void _showDeleteDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final entry = ref.read(selectedEntryProvider);
     if (entry == null) return;
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Entry'),
-        content: Text('Are you sure you want to delete "${entry.title}"?'),
+        title: Text(l10n.deleteEntry),
+        content: Text('${l10n.deleteEntryConfirm}\n\n"${entry.title}"'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -206,7 +210,7 @@ class _EntryDetailState extends ConsumerState<EntryDetail> {
               ref.read(selectedEntryIdProvider.notifier).state = null;
               Navigator.pop(context);
             },
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -231,6 +235,7 @@ class _DetailField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
     return Column(
@@ -263,7 +268,7 @@ class _DetailField extends StatelessWidget {
               if (onCopy != null && value.isNotEmpty)
                 IconButton(
                   icon: const Icon(Icons.copy, size: 20),
-                  tooltip: 'Copy',
+                  tooltip: l10n.copy,
                   onPressed: onCopy,
                 ),
             ],

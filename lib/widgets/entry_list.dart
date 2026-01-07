@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_localizations.dart';
 import '../core/database/app_database.dart';
 import '../providers/entries_provider.dart';
 import '../providers/groups_provider.dart';
@@ -10,6 +11,7 @@ class EntryList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final entries = ref.watch(filteredEntriesProvider);
     final selectedEntryId = ref.watch(selectedEntryIdProvider);
     final selectedGroup = ref.watch(selectedGroupProvider);
@@ -23,18 +25,18 @@ class EntryList extends ConsumerWidget {
             children: [
               Expanded(
                 child: Text(
-                  selectedGroup?.name ?? 'All Entries',
+                  selectedGroup?.name ?? l10n.allEntries,
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
               Text(
-                '${entries.length} items',
+                l10n.items(entries.length),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(width: 8),
               IconButton(
                 icon: const Icon(Icons.add, size: 20),
-                tooltip: 'New Entry',
+                tooltip: l10n.newEntry,
                 onPressed: () => _showAddEntryDialog(context, ref),
               ),
             ],
@@ -56,7 +58,7 @@ class EntryList extends ConsumerWidget {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'No entries yet',
+                        l10n.noEntriesYet,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.outline,
                         ),
@@ -65,7 +67,7 @@ class EntryList extends ConsumerWidget {
                       FilledButton.icon(
                         onPressed: () => _showAddEntryDialog(context, ref),
                         icon: const Icon(Icons.add),
-                        label: const Text('Add Entry'),
+                        label: Text(l10n.addEntry),
                       ),
                     ],
                   ),

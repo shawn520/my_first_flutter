@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
 
 class PasswordGenerator extends StatefulWidget {
   final Function(String) onGenerated;
@@ -71,20 +72,21 @@ class _PasswordGeneratorState extends State<PasswordGenerator> {
     return Colors.green;
   }
 
-  String _getStrengthText() {
+  String _getStrengthText(AppLocalizations l10n) {
     final strength = _calculateStrength();
-    if (strength < 0.3) return 'Weak';
-    if (strength < 0.6) return 'Fair';
-    if (strength < 0.8) return 'Good';
-    return 'Strong';
+    if (strength < 0.3) return l10n.weak;
+    if (strength < 0.6) return l10n.fair;
+    if (strength < 0.8) return l10n.good;
+    return l10n.strong;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
     return AlertDialog(
-      title: const Text('Password Generator'),
+      title: Text(l10n.passwordGenerator),
       content: SizedBox(
         width: 400,
         child: Column(
@@ -99,7 +101,7 @@ class _PasswordGeneratorState extends State<PasswordGenerator> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: SelectableText(
-                _generatedPassword.isEmpty ? 'Select options' : _generatedPassword,
+                _generatedPassword.isEmpty ? l10n.selectAll : _generatedPassword,
                 style: const TextStyle(
                   fontFamily: 'monospace',
                   fontSize: 16,
@@ -120,7 +122,7 @@ class _PasswordGeneratorState extends State<PasswordGenerator> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  _getStrengthText(),
+                  _getStrengthText(l10n),
                   style: TextStyle(
                     color: _getStrengthColor(),
                     fontWeight: FontWeight.bold,
@@ -133,7 +135,7 @@ class _PasswordGeneratorState extends State<PasswordGenerator> {
             // Length slider
             Row(
               children: [
-                const Text('Length: '),
+                Text('${l10n.length}: '),
                 Expanded(
                   child: Slider(
                     value: _length,
@@ -202,7 +204,7 @@ class _PasswordGeneratorState extends State<PasswordGenerator> {
             OutlinedButton.icon(
               onPressed: _generatePassword,
               icon: const Icon(Icons.refresh),
-              label: const Text('Regenerate'),
+              label: Text(l10n.regenerate),
             ),
           ],
         ),
@@ -210,7 +212,7 @@ class _PasswordGeneratorState extends State<PasswordGenerator> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: _generatedPassword.isEmpty
@@ -219,7 +221,7 @@ class _PasswordGeneratorState extends State<PasswordGenerator> {
                   widget.onGenerated(_generatedPassword);
                   Navigator.pop(context);
                 },
-          child: const Text('Use Password'),
+          child: Text(l10n.usePassword),
         ),
       ],
     );

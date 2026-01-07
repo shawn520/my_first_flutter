@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/database_provider.dart';
 import '../providers/entries_provider.dart';
 import '../widgets/group_tree.dart';
@@ -7,6 +8,7 @@ import '../widgets/entry_list.dart';
 import '../widgets/entry_detail.dart';
 import '../widgets/export_dialog.dart';
 import '../widgets/import_dialog.dart';
+import '../widgets/settings_dialog.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -46,8 +48,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
+  void _showSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => const SettingsDialog(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final selectedEntry = ref.watch(selectedEntryProvider);
 
@@ -68,12 +78,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 // Lock button
                 IconButton(
                   icon: const Icon(Icons.lock),
-                  tooltip: 'Lock Database',
+                  tooltip: l10n.lockDatabase,
                   onPressed: _lockDatabase,
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
-                  tooltip: 'Close Database',
+                  tooltip: l10n.closeDatabase,
                   onPressed: _closeDatabase,
                 ),
                 const SizedBox(width: 8),
@@ -83,12 +93,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 // Import/Export buttons
                 IconButton(
                   icon: const Icon(Icons.file_upload_outlined),
-                  tooltip: 'Export Groups',
+                  tooltip: l10n.exportGroups,
                   onPressed: _showExportDialog,
                 ),
                 IconButton(
                   icon: const Icon(Icons.file_download_outlined),
-                  tooltip: 'Import Groups',
+                  tooltip: l10n.importGroups,
                   onPressed: _showImportDialog,
                 ),
                 const SizedBox(width: 8),
@@ -102,7 +112,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     child: TextField(
                       controller: _searchController,
                       decoration: InputDecoration(
-                        hintText: 'Search entries...',
+                        hintText: l10n.searchEntries,
                         prefixIcon: const Icon(Icons.search, size: 20),
                         suffixIcon: _searchController.text.isNotEmpty
                             ? IconButton(
@@ -125,6 +135,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       },
                     ),
                   ),
+                ),
+                const SizedBox(width: 8),
+                const VerticalDivider(width: 1, thickness: 1),
+                const SizedBox(width: 8),
+
+                // Settings button
+                IconButton(
+                  icon: const Icon(Icons.settings),
+                  tooltip: l10n.settings,
+                  onPressed: _showSettingsDialog,
                 ),
               ],
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_localizations.dart';
 import '../providers/database_provider.dart';
 
 class UnlockScreen extends ConsumerStatefulWidget {
@@ -22,10 +23,11 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
   }
 
   Future<void> _unlock() async {
+    final l10n = AppLocalizations.of(context);
     final password = _passwordController.text;
 
     if (password.isEmpty) {
-      setState(() => _errorMessage = 'Please enter your master password');
+      setState(() => _errorMessage = l10n.pleaseEnterPassword);
       return;
     }
 
@@ -41,7 +43,7 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
     setState(() => _isLoading = false);
 
     if (!success) {
-      setState(() => _errorMessage = 'Invalid password');
+      setState(() => _errorMessage = l10n.invalidPassword);
       _passwordController.clear();
     }
   }
@@ -52,6 +54,7 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final dbPath = ref.watch(databasePathProvider);
 
@@ -71,7 +74,7 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Database Locked',
+                  l10n.databaseLocked,
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -97,7 +100,7 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
                           obscureText: _obscurePassword,
                           autofocus: true,
                           decoration: InputDecoration(
-                            labelText: 'Master Password',
+                            labelText: l10n.masterPassword,
                             prefixIcon: const Icon(Icons.key),
                             suffixIcon: IconButton(
                               icon: Icon(_obscurePassword
@@ -149,12 +152,12 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
                                   child:
                                       CircularProgressIndicator(strokeWidth: 2),
                                 )
-                              : const Text('Unlock'),
+                              : Text(l10n.unlock),
                         ),
                         const SizedBox(height: 8),
                         TextButton(
                           onPressed: _closeDatabase,
-                          child: const Text('Close Database'),
+                          child: Text(l10n.closeDatabase),
                         ),
                       ],
                     ),

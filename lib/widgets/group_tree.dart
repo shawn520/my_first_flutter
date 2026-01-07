@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../l10n/app_localizations.dart';
 import '../core/database/app_database.dart';
 import '../providers/groups_provider.dart';
 
@@ -8,6 +9,7 @@ class GroupTree extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final groupsAsync = ref.watch(allGroupsProvider);
     final selectedGroupId = ref.watch(selectedGroupIdProvider);
 
@@ -18,15 +20,15 @@ class GroupTree extends ConsumerWidget {
           padding: const EdgeInsets.all(8.0),
           child: Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Groups',
-                  style: TextStyle(fontWeight: FontWeight.bold),
+                  l10n.groups,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
               IconButton(
                 icon: const Icon(Icons.create_new_folder, size: 20),
-                tooltip: 'New Group',
+                tooltip: l10n.newGroup,
                 onPressed: () => _showAddGroupDialog(context, ref),
               ),
             ],
@@ -38,7 +40,7 @@ class GroupTree extends ConsumerWidget {
         ListTile(
           dense: true,
           leading: const Icon(Icons.folder_special, size: 20),
-          title: const Text('All Entries'),
+          title: Text(l10n.allEntries),
           selected: selectedGroupId == null,
           onTap: () {
             ref.read(selectedGroupIdProvider.notifier).state = null;
@@ -49,19 +51,19 @@ class GroupTree extends ConsumerWidget {
         Expanded(
           child: groupsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            error: (e, _) => Center(child: Text('${l10n.error}: $e')),
             data: (groups) {
               // Filter out root and show only user groups
               final userGroups = groups.where((g) => g.id != 1).toList();
 
               if (userGroups.isEmpty) {
-                return const Center(
+                return Center(
                   child: Padding(
-                    padding: EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
                     child: Text(
-                      'No groups yet.\nClick + to create one.',
+                      l10n.noGroupsYet,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.grey),
+                      style: const TextStyle(color: Colors.grey),
                     ),
                   ),
                 );
@@ -85,18 +87,19 @@ class GroupTree extends ConsumerWidget {
   }
 
   void _showAddGroupDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final controller = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('New Group'),
+        title: Text(l10n.newGroup),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Group Name',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: l10n.groupName,
+            border: const OutlineInputBorder(),
           ),
           onSubmitted: (value) {
             if (value.isNotEmpty) {
@@ -108,7 +111,7 @@ class GroupTree extends ConsumerWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () {
@@ -117,7 +120,7 @@ class GroupTree extends ConsumerWidget {
                 Navigator.pop(context);
               }
             },
-            child: const Text('Create'),
+            child: Text(l10n.create),
           ),
         ],
       ),
@@ -136,6 +139,8 @@ class _GroupTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+
     return ListTile(
       dense: true,
       leading: Icon(
@@ -150,23 +155,23 @@ class _GroupTile extends ConsumerWidget {
       trailing: PopupMenuButton<String>(
         icon: const Icon(Icons.more_vert, size: 18),
         itemBuilder: (context) => [
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'rename',
             child: Row(
               children: [
-                Icon(Icons.edit, size: 18),
-                SizedBox(width: 8),
-                Text('Rename'),
+                const Icon(Icons.edit, size: 18),
+                const SizedBox(width: 8),
+                Text(l10n.rename),
               ],
             ),
           ),
-          const PopupMenuItem(
+          PopupMenuItem(
             value: 'delete',
             child: Row(
               children: [
-                Icon(Icons.delete, size: 18),
-                SizedBox(width: 8),
-                Text('Delete'),
+                const Icon(Icons.delete, size: 18),
+                const SizedBox(width: 8),
+                Text(l10n.delete),
               ],
             ),
           ),
@@ -186,24 +191,25 @@ class _GroupTile extends ConsumerWidget {
   }
 
   void _showRenameDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final controller = TextEditingController(text: group.name);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Rename Group'),
+        title: Text(l10n.renameGroup),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(
-            labelText: 'Group Name',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: l10n.groupName,
+            border: const OutlineInputBorder(),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () {
@@ -214,7 +220,7 @@ class _GroupTile extends ConsumerWidget {
                 Navigator.pop(context);
               }
             },
-            child: const Text('Rename'),
+            child: Text(l10n.save),
           ),
         ],
       ),
@@ -222,18 +228,17 @@ class _GroupTile extends ConsumerWidget {
   }
 
   void _showDeleteDialog(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Group'),
-        content: Text(
-          'Are you sure you want to delete "${group.name}"?\n\n'
-          'All entries in this group will also be deleted.',
-        ),
+        title: Text(l10n.deleteGroup),
+        content: Text(l10n.deleteGroupConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -246,7 +251,7 @@ class _GroupTile extends ConsumerWidget {
               }
               Navigator.pop(context);
             },
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),

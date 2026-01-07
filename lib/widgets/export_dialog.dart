@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
+import '../l10n/app_localizations.dart';
 import '../core/database/app_database.dart';
 import '../core/export/export_service.dart';
 import '../core/crypto/crypto_service.dart';
@@ -77,31 +78,50 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
     return DateTime.now().add(duration);
   }
 
+  String _getExpiryLabel(ExpiryOption option, AppLocalizations l10n) {
+    switch (option) {
+      case ExpiryOption.oneHour:
+        return l10n.oneHour;
+      case ExpiryOption.twentyFourHours:
+        return l10n.twentyFourHours;
+      case ExpiryOption.sevenDays:
+        return l10n.sevenDays;
+      case ExpiryOption.thirtyDays:
+        return l10n.thirtyDays;
+      case ExpiryOption.never:
+        return l10n.never;
+      case ExpiryOption.custom:
+        return l10n.custom;
+    }
+  }
+
   Future<void> _export() async {
+    final l10n = AppLocalizations.of(context);
+
     // Validate
     if (_selectedGroupIds.isEmpty) {
-      setState(() => _errorMessage = 'Please select at least one group');
+      setState(() => _errorMessage = l10n.selectAtLeastOneGroup);
       return;
     }
 
     if (_passwordController.text.isEmpty) {
-      setState(() => _errorMessage = 'Please enter or generate a password');
+      setState(() => _errorMessage = l10n.pleaseEnterPassword);
       return;
     }
 
     if (_passwordController.text.length < 6) {
-      setState(() => _errorMessage = 'Password must be at least 6 characters');
+      setState(() => _errorMessage = l10n.passwordMinLength);
       return;
     }
 
     if (_selectedExpiry == ExpiryOption.custom && _customExpiryDate == null) {
-      setState(() => _errorMessage = 'Please select a custom expiry date');
+      setState(() => _errorMessage = l10n.selectCustomExpiry);
       return;
     }
 
     // Select save path
     final savePath = await FilePicker.platform.saveFile(
-      dialogTitle: 'Export Password Data',
+      dialogTitle: l10n.exportGroups,
       fileName: 'passwords_export.pwexp',
       allowedExtensions: ['pwexp'],
       type: FileType.custom,
@@ -119,7 +139,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
       final encryptionKey = ref.read(encryptionKeyProvider);
 
       if (db == null) {
-        setState(() => _errorMessage = 'Database not available');
+        setState(() => _errorMessage = l10n.databaseNotAvailable);
         return;
       }
 
@@ -151,7 +171,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         _showSuccessDialog(savePath);
       }
     } catch (e) {
-      setState(() => _errorMessage = 'Export failed: $e');
+      setState(() => _errorMessage = '${l10n.exportFailed}: $e');
     } finally {
       if (mounted) {
         setState(() => _isExporting = false);
@@ -160,21 +180,23 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
   }
 
   void _showSuccessDialog(String path) {
+    final l10n = AppLocalizations.of(context);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.check_circle, color: Colors.green),
-            SizedBox(width: 8),
-            Text('Export Successful'),
+            const Icon(Icons.check_circle, color: Colors.green),
+            const SizedBox(width: 8),
+            Text(l10n.exportSuccessful),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('File saved to:'),
+            Text(l10n.fileSavedTo),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(8),
@@ -188,14 +210,14 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Important: Remember your export password!\nYou will need it to import this file.',
-              style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+            Text(
+              l10n.rememberPassword,
+              style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                const Text('Password: '),
+                Text('${l10n.password}: '),
                 Expanded(
                   child: SelectableText(
                     _passwordController.text,
@@ -208,7 +230,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
                     Clipboard.setData(
                         ClipboardData(text: _passwordController.text));
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Password copied')),
+                      SnackBar(content: Text(l10n.passwordCopied)),
                     );
                   },
                 ),
@@ -219,7 +241,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         actions: [
           FilledButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
+            child: Text(l10n.ok),
           ),
         ],
       ),
@@ -228,11 +250,12 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final groupsAsync = ref.watch(allGroupsProvider);
 
     return AlertDialog(
-      title: const Text('Export Groups'),
+      title: Text(l10n.exportGroups),
       content: SizedBox(
         width: 500,
         child: SingleChildScrollView(
@@ -242,7 +265,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
             children: [
               // Group selection
               Text(
-                'Select Groups to Export',
+                l10n.selectGroupsToExport,
                 style: theme.textTheme.titleSmall,
               ),
               const SizedBox(height: 8),
@@ -255,17 +278,17 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
                 child: groupsAsync.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                  error: (e, _) => Center(child: Text('Error: $e')),
+                  error: (e, _) => Center(child: Text('${l10n.error}: $e')),
                   data: (groups) {
                     final userGroups = groups.where((g) => g.id != 1).toList();
                     if (userGroups.isEmpty) {
-                      return const Center(child: Text('No groups available'));
+                      return Center(child: Text(l10n.noGroupsAvailable));
                     }
                     return ListView(
                       children: [
                         // Select all option
                         CheckboxListTile(
-                          title: const Text('Select All'),
+                          title: Text(l10n.selectAll),
                           value: _selectedGroupIds.length == userGroups.length,
                           tristate: true,
                           onChanged: (value) {
@@ -307,7 +330,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
 
               // Expiry selection
               Text(
-                'Expiry',
+                l10n.expiry,
                 style: theme.textTheme.titleSmall,
               ),
               const SizedBox(height: 8),
@@ -316,7 +339,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
                 runSpacing: 8,
                 children: ExpiryOption.values.map((option) {
                   return ChoiceChip(
-                    label: Text(option.label),
+                    label: Text(_getExpiryLabel(option, l10n)),
                     selected: _selectedExpiry == option,
                     onSelected: (selected) {
                       if (selected) {
@@ -335,7 +358,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
                   _customExpiryDate != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  'Expires: ${_formatDate(_customExpiryDate!)}',
+                  l10n.expiresAt(_formatDate(_customExpiryDate!)),
                   style: theme.textTheme.bodySmall,
                 ),
               ],
@@ -343,7 +366,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
 
               // Password
               Text(
-                'Export Password',
+                l10n.exportPassword,
                 style: theme.textTheme.titleSmall,
               ),
               const SizedBox(height: 8),
@@ -354,7 +377,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
-                        hintText: 'Enter or generate password',
+                        hintText: l10n.enterOrGeneratePassword,
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
                           icon: Icon(_obscurePassword
@@ -370,13 +393,13 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
                   FilledButton.icon(
                     onPressed: _generatePassword,
                     icon: const Icon(Icons.casino),
-                    label: const Text('Generate'),
+                    label: Text(l10n.generate),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               Text(
-                'This password will be required to import the file',
+                l10n.passwordRequiredForImport,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.outline,
                 ),
@@ -412,7 +435,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: _isExporting ? null : _export,
@@ -422,7 +445,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Export'),
+              : Text(l10n.export),
         ),
       ],
     );

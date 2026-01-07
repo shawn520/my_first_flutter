@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_localizations.dart';
 import '../providers/database_provider.dart';
+import '../providers/settings_provider.dart';
+import '../widgets/settings_dialog.dart';
 
 class UnlockScreen extends ConsumerStatefulWidget {
   const UnlockScreen({super.key});
@@ -48,8 +50,17 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
     }
   }
 
-  Future<void> _closeDatabase() async {
+  Future<void> _switchUser() async {
+    // Close current database and clear the last database path
     await ref.read(databaseNotifierProvider.notifier).closeDatabase();
+    await ref.read(settingsProvider.notifier).setLastDatabasePath(null);
+  }
+
+  void _showSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => const SettingsDialog(),
+    );
   }
 
   @override
@@ -59,6 +70,18 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
     final dbPath = ref.watch(databasePathProvider);
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: l10n.settings,
+            onPressed: _showSettingsDialog,
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(32),
@@ -82,7 +105,7 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
                 const SizedBox(height: 8),
                 if (dbPath != null)
                   Text(
-                    dbPath.split('\\').last,
+                    dbPath.split('\\').last.split('/').last,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -154,10 +177,16 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
                                 )
                               : Text(l10n.unlock),
                         ),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: _closeDatabase,
-                          child: Text(l10n.closeDatabase),
+                        const SizedBox(height: 16),
+
+                        // Switch user / Use another database
+                        OutlinedButton.icon(
+                          onPressed: _switchUser,
+                          icon: const Icon(Icons.swap_horiz),
+                          label: Text(l10n.useAnotherDatabase),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(44),
+                          ),
                         ),
                       ],
                     ),

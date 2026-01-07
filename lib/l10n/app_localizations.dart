@@ -34,6 +34,8 @@ abstract class AppLocalizations {
   String get databaseLocked;
   String get closeDatabase;
   String get invalidPassword;
+  String get switchUser;
+  String get useAnotherDatabase;
 
   // Home screen
   String get lockDatabase;
@@ -148,6 +150,16 @@ abstract class AppLocalizations {
   String get currentPasswordWrong;
   String get newPasswordTooShort;
   String get newPasswordsDoNotMatch;
+  String get autoLock;
+  String get autoLockDescription;
+  String get autoLockOneMinute;
+  String get autoLockFiveMinutes;
+  String get autoLockThirtyMinutes;
+  String get autoLockNever;
+  String get autoLockCustom;
+  String get minutes;
+  String get enterMinutes;
+  String autoLockCustomMinutes(int minutes);
 
   // Common
   String get delete;
@@ -238,6 +250,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get closeDatabase => '关闭数据库';
   @override
   String get invalidPassword => '密码错误';
+  @override
+  String get switchUser => '切换用户';
+  @override
+  String get useAnotherDatabase => '使用其他数据库';
 
   // Home screen
   @override
@@ -452,6 +468,26 @@ class AppLocalizationsZh extends AppLocalizations {
   String get newPasswordTooShort => '新密码至少4个字符';
   @override
   String get newPasswordsDoNotMatch => '两次新密码不一致';
+  @override
+  String get autoLock => '自动锁定';
+  @override
+  String get autoLockDescription => '无操作后自动锁定数据库';
+  @override
+  String get autoLockOneMinute => '1分钟';
+  @override
+  String get autoLockFiveMinutes => '5分钟';
+  @override
+  String get autoLockThirtyMinutes => '30分钟';
+  @override
+  String get autoLockNever => '永不';
+  @override
+  String get autoLockCustom => '自定义';
+  @override
+  String get minutes => '分钟';
+  @override
+  String get enterMinutes => '输入分钟数';
+  @override
+  String autoLockCustomMinutes(int minutes) => '$minutes 分钟';
 
   // Common
   @override
@@ -534,6 +570,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get closeDatabase => 'Close Database';
   @override
   String get invalidPassword => 'Invalid password';
+  @override
+  String get switchUser => 'Switch User';
+  @override
+  String get useAnotherDatabase => 'Use Another Database';
 
   // Home screen
   @override
@@ -748,6 +788,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get newPasswordTooShort => 'New password must be at least 4 characters';
   @override
   String get newPasswordsDoNotMatch => 'New passwords do not match';
+  @override
+  String get autoLock => 'Auto-lock';
+  @override
+  String get autoLockDescription => 'Lock database after inactivity';
+  @override
+  String get autoLockOneMinute => '1 minute';
+  @override
+  String get autoLockFiveMinutes => '5 minutes';
+  @override
+  String get autoLockThirtyMinutes => '30 minutes';
+  @override
+  String get autoLockNever => 'Never';
+  @override
+  String get autoLockCustom => 'Custom';
+  @override
+  String get minutes => 'minutes';
+  @override
+  String get enterMinutes => 'Enter minutes';
+  @override
+  String autoLockCustomMinutes(int minutes) => '$minutes minutes';
 
   // Common
   @override

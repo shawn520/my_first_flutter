@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/database/app_database.dart';
 import '../core/crypto/crypto_service.dart';
+import 'settings_provider.dart';
 
 /// Database state enum
 enum DatabaseState { none, locked, unlocked }
@@ -48,6 +49,9 @@ class DatabaseNotifier extends StateNotifier<DatabaseState> {
       ref.read(encryptionKeyProvider.notifier).state = encryptionKey;
       ref.read(databaseStateProvider.notifier).state = DatabaseState.unlocked;
 
+      // Save last database path
+      await ref.read(settingsProvider.notifier).setLastDatabasePath(filePath);
+
       state = DatabaseState.unlocked;
       return true;
     } catch (e) {
@@ -84,6 +88,9 @@ class DatabaseNotifier extends StateNotifier<DatabaseState> {
       ref.read(databaseProvider.notifier).state = db;
       ref.read(encryptionKeyProvider.notifier).state = encryptionKey;
       ref.read(databaseStateProvider.notifier).state = DatabaseState.unlocked;
+
+      // Save last database path
+      await ref.read(settingsProvider.notifier).setLastDatabasePath(filePath);
 
       state = DatabaseState.unlocked;
       return true;

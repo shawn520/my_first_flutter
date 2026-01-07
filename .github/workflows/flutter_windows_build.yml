@@ -1,76 +1,76 @@
-name: Flutter Windows Auto Build
+# name: Flutter Windows Auto Build
 
-# 关键新增：提升Token权限
-permissions:
-  contents: write  # 赋予读写仓库内容（含Release）的权限
-  packages: write  # 可选，如需操作包发布
+# # 关键新增：提升Token权限
+# permissions:
+#   contents: write  # 赋予读写仓库内容（含Release）的权限
+#   packages: write  # 可选，如需操作包发布
 
-# 触发条件：push到main/master分支、创建tag、手动触发
-on:
-  push:
-    branches: [ main, master ]
-    tags: [ 'v*' ]
-  workflow_dispatch:  # 允许手动触发
+# # 触发条件：push到main/master分支、创建tag、手动触发
+# on:
+#   push:
+#     branches: [ main, master ]
+#     tags: [ 'v*' ]
+#   workflow_dispatch:  # 允许手动触发
 
-jobs:
-  build-windows:
-    runs-on: windows-latest  # 必须使用Windows环境编译Windows应用
-    steps:
-      # 1. 检出代码
-      - name: Checkout code
-        uses: actions/checkout@v4
+# jobs:
+#   build-windows:
+#     runs-on: windows-latest  # 必须使用Windows环境编译Windows应用
+#     steps:
+#       # 1. 检出代码
+#       - name: Checkout code
+#         uses: actions/checkout@v4
 
-      # 2. 配置Flutter环境
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          # 关键修改：升级Flutter版本到3.19.6（对应Dart 3.3.4不行，直接升到3.22.0+）
-          # 推荐用3.22.0（绑定Dart 3.4.0）或3.24.0（绑定Dart 3.5.0），满足^3.10.4要求
-          flutter-version: '3.38.5' 
-          cache: true  # 缓存Flutter依赖，加速构建
-          channel: 'stable'  # 使用稳定版
+#       # 2. 配置Flutter环境
+#       - name: Set up Flutter
+#         uses: subosito/flutter-action@v2
+#         with:
+#           # 关键修改：升级Flutter版本到3.19.6（对应Dart 3.3.4不行，直接升到3.22.0+）
+#           # 推荐用3.22.0（绑定Dart 3.4.0）或3.24.0（绑定Dart 3.5.0），满足^3.10.4要求
+#           flutter-version: '3.38.5' 
+#           cache: true  # 缓存Flutter依赖，加速构建
+#           channel: 'stable'  # 使用稳定版
 
-      # 3. 启用Windows桌面支持（首次编译需要）
-      - name: Enable Windows desktop
-        run: flutter config --enable-windows-desktop
+#       # 3. 启用Windows桌面支持（首次编译需要）
+#       - name: Enable Windows desktop
+#         run: flutter config --enable-windows-desktop
 
-      # 4. 获取项目依赖
-      - name: Get dependencies
-        run: flutter pub get
-        working-directory: .
+#       # 4. 获取项目依赖
+#       - name: Get dependencies
+#         run: flutter pub get
+#         working-directory: .
 
-      # 5. 代码检查（可选）
-      # - name: Analyze code
-      #   run: flutter analyze
+#       # 5. 代码检查（可选）
+#       # - name: Analyze code
+#       #   run: flutter analyze
 
-      # 6. 编译Windows Release版本
-      - name: Build Windows application
-        run: flutter build windows --release
-        working-directory: .
+#       # 6. 编译Windows Release版本
+#       - name: Build Windows application
+#         run: flutter build windows --release
+#         working-directory: .
 
-      # 7. 打包编译产物为ZIP（方便下载）
-      - name: Package Windows build to ZIP
-        run: |
-          $zipFileName = "flutter_windows_app_${{ github.sha }}.zip"
-          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath $zipFileName
-          echo "ZIP_FILE_NAME=$zipFileName" >> $env:GITHUB_ENV
-        shell: pwsh
+#       # 7. 打包编译产物为ZIP（方便下载）
+#       - name: Package Windows build to ZIP
+#         run: |
+#           $zipFileName = "flutter_windows_app_${{ github.sha }}.zip"
+#           Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath $zipFileName
+#           echo "ZIP_FILE_NAME=$zipFileName" >> $env:GITHUB_ENV
+#         shell: pwsh
 
-      # 8. 上传ZIP产物到Artifacts
-      - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: flutter-windows-app
-          path: ${{ env.ZIP_FILE_NAME }}
-          retention-days: 30  # 产物保留30天
+#       # 8. 上传ZIP产物到Artifacts
+#       - name: Upload Windows artifact
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: flutter-windows-app
+#           path: ${{ env.ZIP_FILE_NAME }}
+#           retention-days: 30  # 产物保留30天
 
-      # 9. 如果是tag推送，创建Release并上传产物
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ env.ZIP_FILE_NAME }}
-          name: Release ${{ github.ref_name }}
-          body: Automatic Windows build for ${{ github.ref_name }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#       # 9. 如果是tag推送，创建Release并上传产物
+#       - name: Create GitHub Release
+#         if: startsWith(github.ref, 'refs/tags/')
+#         uses: softprops/action-gh-release@v2
+#         with:
+#           files: ${{ env.ZIP_FILE_NAME }}
+#           name: Release ${{ github.ref_name }}
+#           body: Automatic Windows build for ${{ github.ref_name }}
+#         env:
+#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

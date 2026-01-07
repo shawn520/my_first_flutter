@@ -1,0 +1,143 @@
+name: Flutter Ubuntu Build (Multi-Arch DEB)
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-ubuntu-deb:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60  # 设置60分钟超时，避免无意义等待
+    # 矩阵配置：同时编译x86_64(amd64)和arm64(aarch64)
+    strategy:
+      fail-fast: false  # 一个架构失败不影响另一个
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. 安装基础依赖 + QEMU（模拟ARM架构）
+      - name: Install base dependencies
+        run: |
+          sudo apt-get update && sudo apt-get upgrade -y
+          # 基础编译依赖
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev libssl-dev libgl1-mesa-dev
+          # DEB打包依赖
+          sudo apt-get install -y dpkg-dev fakeroot
+          # QEMU（用于ARM模拟）
+          sudo apt-get install -y qemu-user-static binfmt-support
+          # 注册QEMU支持ARM二进制执行
+          sudo update-binfmts --enable
+
+      # 2. 针对ARM架构安装交叉编译依赖
+      - name: Install ARM cross-compile dependencies
+        if: matrix.arch == 'arm64'
+        run: |
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+          # 安装ARM版本的GTK3依赖（交叉编译用）
+          sudo apt-get install -y libgtk-3-dev:arm64 libgl1-mesa-dev:arm64
+
+      # 3. 配置Flutter环境
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          cache: true
+          channel: 'stable'
+
+      # 4. 启用Linux桌面支持
+      - name: Enable Linux desktop
+        run: flutter config --enable-linux-desktop
+
+      # 5. 获取Flutter依赖
+      - name: Get dependencies
+        run: flutter pub get
+
+      # 6. 编译对应架构的Linux Release版本
+      - name: Build Flutter Linux app (amd64)
+        if: matrix.arch == 'amd64'
+        run: flutter build linux --release --dart-define=ARCH=amd64
+
+      - name: Build Flutter Linux app (arm64)
+        if: matrix.arch == 'arm64'
+        run: |
+          # 设置交叉编译环境变量
+          export CC=aarch64-linux-gnu-gcc
+          export CXX=aarch64-linux-gnu-g++
+          export AR=aarch64-linux-gnu-ar
+          export LD=aarch64-linux-gnu-ld
+          # 编译ARM64版本
+          flutter build linux --release --dart-define=ARCH=arm64
+
+      # 7. 构建对应架构的DEB包
+      - name: Build DEB package
+        run: |
+          # 定义版本号和应用名
+          APP_VERSION=${{ github.ref_name || github.sha }}
+          APP_VERSION=$(echo $APP_VERSION | sed 's/[^a-zA-Z0-9.+-]/-/g')
+          APP_NAME="my_flutter_app"
+          
+          # 创建DEB目录结构
+          DEB_ROOT="flutter_app_deb_${{ matrix.arch }}"
+          DEB_DIR="$DEB_ROOT/opt/$APP_NAME"
+          BIN_DIR="$DEB_ROOT/usr/bin"
+          CONTROL_DIR="$DEB_ROOT/DEBIAN"
+          
+          mkdir -p $DEB_DIR $BIN_DIR $CONTROL_DIR
+          
+          # 复制编译产物
+          cp -r build/linux/${{ matrix.arch == 'arm64' && 'arm64' || 'x64' }}/release/bundle/* $DEB_DIR/
+          
+          # 创建软链接
+          ln -s /opt/$APP_NAME/$APP_NAME $BIN_DIR/$APP_NAME
+          
+          # 编写control文件（指定架构）
+          cat > $CONTROL_DIR/control << EOF
+          Package: $APP_NAME
+          Version: $APP_VERSION
+          Architecture: ${{ matrix.arch }}  # 关键：标识架构
+          Maintainer: Your Name <your-email@example.com>
+          Depends: libgtk-3-0:${{ matrix.arch }}, libstdc++6:${{ matrix.arch }}, libgl1-mesa-glx:${{ matrix.arch }}, libssl3:${{ matrix.arch }}
+          Section: utils
+          Priority: optional
+          Description: A Flutter application for Ubuntu (${{ matrix.arch }})
+            Auto-built DEB package for ${{ matrix.arch }} architecture.
+          EOF
+          
+          # 修复权限
+          chmod -R 755 $DEB_ROOT
+          chmod 644 $CONTROL_DIR/control
+          
+          # 构建DEB包（含架构标识）
+          DEB_PACKAGE_NAME="${APP_NAME}_${APP_VERSION}_${{ matrix.arch }}.deb"
+          fakeroot dpkg-deb --build $DEB_ROOT $DEB_PACKAGE_NAME
+          
+          # 验证DEB包
+          dpkg-deb -I $DEB_PACKAGE_NAME
+          echo "DEB_PACKAGE_NAME=$DEB_PACKAGE_NAME" >> $GITHUB_ENV
+
+      # 8. 上传DEB包（按架构区分）
+      - name: Upload DEB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-ubuntu-deb-${{ matrix.arch }}
+          path: ${{ env.DEB_PACKAGE_NAME }}
+          retention-days: 30
+
+      # 9. 发布到GitHub Release（tag触发时）
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.DEB_PACKAGE_NAME }}
+          name: Release ${{ github.ref_name }}
+          body: "Automatic Ubuntu build for ${{ github.ref_name }}\n- ${{ matrix.arch }} architecture: ${{ env.DEB_PACKAGE_NAME }}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

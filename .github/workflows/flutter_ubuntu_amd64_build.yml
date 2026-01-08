@@ -12,7 +12,7 @@ permissions:
 jobs:
   build-ubuntu-amd64-deb:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 60  # 设置60分钟超时，避免无意义等待
 
     steps:
       - name: Checkout code
@@ -50,8 +50,21 @@ jobs:
       # 6. 构建AMD64专属DEB包
       - name: Build DEB package (AMD64)
         run: |
-          APP_VERSION=${{ github.ref_name || github.sha }}
-          APP_VERSION=$(echo $APP_VERSION | sed 's/[^a-zA-Z0-9.+-]/-/g')
+          # 定义版本号和应用名
+          # 修复：确保Version字段始终以数字开头（DEB包规范要求）
+          # 优先级：tag版本(去v) > 分支名+提交哈希(0.0.0-前缀) > 纯提交哈希(0.0.0-前缀)
+          RAW_VERSION=${{ github.ref_name || github.sha }}
+          # 处理tag版本（如v1.0.0 → 1.0.0）
+          if [[ $RAW_VERSION == v* ]]; then
+            APP_VERSION=${RAW_VERSION:1}  # 去掉开头的v，符合DEB版本规范
+          else
+            # 非tag版本：强制以0.0.0开头，拼接清理后的分支名+短哈希
+            SHA_SHORT=${{ github.sha }}
+            SHA_SHORT=${SHA_SHORT:0:8}  # 截取哈希前8位，避免版本号过长
+            CLEAN_BRANCH=$(echo $RAW_VERSION | sed 's/[^a-zA-Z0-9.+-]/-/g')  # 清理非法字符
+            APP_VERSION="0.0.0-${CLEAN_BRANCH}-${SHA_SHORT}"
+          fi
+          
           APP_NAME="my_flutter_app"
           
           # 创建DEB目录结构
@@ -61,14 +74,18 @@ jobs:
           CONTROL_DIR="$DEB_ROOT/DEBIAN"
           
           mkdir -p $DEB_DIR $BIN_DIR $CONTROL_DIR
+          
+          # 复制编译产物
           cp -r build/linux/x64/release/bundle/* $DEB_DIR/
+          
+          # 创建软链接（让用户可全局执行应用）
           ln -s /opt/$APP_NAME/$APP_NAME $BIN_DIR/$APP_NAME
           
           # 编写control文件（固定AMD64架构）
           cat > $CONTROL_DIR/control << EOF
           Package: $APP_NAME
           Version: $APP_VERSION
-          Architecture: amd64
+          Architecture: amd64  # 关键：标识架构
           Maintainer: Your Name <your-email@example.com>
           Depends: libgtk-3-0:amd64, libstdc++6:amd64, libgl1-mesa-glx:amd64, libssl3:amd64
           Section: utils
@@ -77,21 +94,25 @@ jobs:
             Auto-built DEB package for amd64 (x86_64) architecture.
           EOF
           
+          # 修复文件权限
           chmod -R 755 $DEB_ROOT
           chmod 644 $CONTROL_DIR/control
           
+          # 构建DEB包（含架构标识）
           DEB_PACKAGE_NAME="${APP_NAME}_${APP_VERSION}_amd64.deb"
           fakeroot dpkg-deb --build $DEB_ROOT $DEB_PACKAGE_NAME
+          
+          # 验证DEB包（可选，确保包有效）
           dpkg-deb -I $DEB_PACKAGE_NAME
           echo "DEB_PACKAGE_NAME=$DEB_PACKAGE_NAME" >> $GITHUB_ENV
 
-      # 7. 上传AMD64 DEB包
+      # 7. 上传AMD64 DEB包（按架构区分）
       - name: Upload AMD64 DEB artifact
         uses: actions/upload-artifact@v4
         with:
           name: flutter-ubuntu-deb-amd64
           path: ${{ env.DEB_PACKAGE_NAME }}
-          retention-days: 30
+          retention-days: 30  # 保留30天
 
       # 8. 发布到GitHub Release（tag触发时）
       - name: Create GitHub Release (AMD64)

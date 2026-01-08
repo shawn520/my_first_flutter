@@ -22,10 +22,15 @@ jobs:
       - name: Install base dependencies
         run: |
           sudo apt-get update -y
-          # 仅安装AMD64编译依赖
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev libssl-dev libgl1-mesa-glx
+          # 修复：添加32位架构支持（解决GL库安装问题）
+          sudo dpkg --add-architecture i386
+          sudo apt-get update -y
+          # 仅安装AMD64编译依赖（替换libgl1-mesa-glx为通用libgl1，兼容新版Ubuntu）
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev libssl-dev libgl1
           # DEB打包依赖
           sudo apt-get install -y dpkg-dev fakeroot
+          # 兜底：安装Flutter Linux编译必需的GL依赖（防止缺失）
+          sudo apt-get install -y libglu1-mesa-dev freeglut3-dev mesa-common-dev
 
       # 2. 配置Flutter环境
       - name: Set up Flutter
@@ -112,7 +117,8 @@ jobs:
           Version: $APP_VERSION
           Architecture: amd64
           Maintainer: Your Name <your-email@example.com>
-          Depends: libgtk-3-0:amd64, libstdc++6:amd64, libgl1-mesa-glx:amd64, libssl3:amd64
+          # 修复：Depends字段使用通用libgl1，兼容新版Ubuntu
+          Depends: libgtk-3-0:amd64, libstdc++6:amd64, libgl1:amd64, libssl3:amd64
           Section: utils
           Priority: optional
           Description: A Flutter application for Ubuntu (amd64)

@@ -1,0 +1,125 @@
+name: Flutter HarmonyOS (OpenHarmony) Build
+
+on:
+  push:
+    branches: [ main, master, optimize_ci ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-harmonyos-hap:
+    runs-on: ubuntu-22.04  # 推荐Ubuntu，兼容OpenHarmony SDK
+    timeout-minutes: 90  # 鸿蒙SDK下载+编译耗时较长
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. 安装基础依赖（OpenHarmony SDK 要求）
+      - name: Install system dependencies
+        run: |
+          # 安装OpenHarmony SDK依赖
+          sudo apt update && sudo apt install -y \
+            openjdk-11-jdk \
+            unzip \
+            wget \
+            python3 \
+            gcc \
+            g++
+          # 配置JDK 11（OpenHarmony SDK 要求）
+          export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+          echo "JAVA_HOME=$JAVA_HOME" >> $GITHUB_ENV
+
+      # 2. 下载并配置 OpenHarmony SDK
+      - name: Set up OpenHarmony SDK
+        run: |
+          # 下载OpenHarmony 4.0 SDK（适配鸿蒙Next）
+          OH_SDK_VERSION="4.0.10.100"
+          wget https://repo.huaweicloud.com/openharmony/sdk/ohos/$OH_SDK_VERSION/ohos-sdk-linux-$OH_SDK_VERSION.zip -O ohos-sdk.zip
+          # 解压SDK
+          mkdir -p ~/ohos-sdk
+          unzip -q ohos-sdk.zip -d ~/ohos-sdk
+          # 配置SDK环境变量
+          echo "OHOS_SDK_HOME=$HOME/ohos-sdk" >> $GITHUB_ENV
+          echo "PATH=$HOME/ohos-sdk/toolchains/bin:$PATH" >> $GITHUB_ENV
+
+      # 3. 配置 Flutter 环境（含鸿蒙适配层）
+      - name: Set up Flutter with HarmonyOS support
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.5'
+          cache: true
+          channel: 'stable'
+
+      # 4. 安装 Flutter 鸿蒙适配插件
+      - name: Install Flutter HarmonyOS plugin
+        run: |
+          # 安装社区维护的鸿蒙适配插件（flutter-ohos）
+          flutter pub add flutter-ohos:^0.1.0
+          # 升级依赖，解决版本冲突
+          flutter pub upgrade
+          # 初始化鸿蒙平台项目文件
+          flutter create --platforms ohos .
+          # 验证鸿蒙项目文件
+          ls -la ohos/ || echo "❌ 鸿蒙项目文件生成失败"
+
+      # 5. 安装鸿蒙项目依赖
+      - name: Install HarmonyOS dependencies
+        run: |
+          # 安装鸿蒙npm依赖（若有）
+          cd ohos && npm install
+          # 配置鸿蒙签名（调试版免签名，发布版需鸿蒙开发者证书）
+          ohos-package build --mode debug --no-sign
+
+      # 6. 打包鸿蒙 HAP 包（调试版，免签名）
+      - name: Build HarmonyOS HAP (Debug, Unsigned)
+        run: |
+          # 打包鸿蒙调试版HAP（OpenHarmony原生格式）
+          flutter build ohos --debug --no-sign
+          # 验证产物
+          echo "===== 鸿蒙HAP产物 ====="
+          ls -la build/ohos/debug/ || echo "❌ HAP打包失败"
+
+      # 7. 【可选】打包鸿蒙发布版HAP（需开发者证书）
+      - name: Build HarmonyOS Release HAP (Signed)
+        env:
+          # 从GitHub Secrets读取鸿蒙证书（需提前配置）
+          OH_CERTIFICATE_BASE64: ${{ secrets.OH_CERTIFICATE_BASE64 }}
+          OH_CERT_PASSWORD: ${{ secrets.OH_CERT_PASSWORD }}
+        run: |
+          # 解码鸿蒙开发者证书
+          echo $OH_CERTIFICATE_BASE64 | base64 -d > ohos/cert.p12
+          # 打包签名的发布版HAP
+          flutter build ohos --release --sign ohos/cert.p12 --password $OH_CERT_PASSWORD
+          # 验证发布版产物
+          ls -la build/ohos/release/
+
+      # 8. 上传鸿蒙HAP产物
+      - name: Upload HarmonyOS HAP Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-harmonyos-hap
+          path: |
+            build/ohos/debug/*.hap
+            build/ohos/release/*.hap
+          retention-days: 30
+        if: always()  # 容错：即使有警告仍上传产物
+
+      # 9. 发布到GitHub Release（仅Tag触发时）
+      - name: Release HarmonyOS HAP
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/ohos/debug/*.hap
+            build/ohos/release/*.hap
+          name: Release ${{ github.ref_name }}
+          body: |
+            Flutter 鸿蒙（OpenHarmony）HAP包
+            - Debug HAP：免签名，适合开发测试
+            - Release HAP：已签名，可用于鸿蒙设备安装
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

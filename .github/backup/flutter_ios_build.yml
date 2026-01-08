@@ -1,0 +1,109 @@
+name: Flutter iOS IPA Build
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  workflow_dispatch:  # 支持手动触发
+
+permissions:
+  contents: write
+
+jobs:
+  build-ios-ipa:
+    runs-on: macos-14  # iOS打包必须用macOS Runner（仅Xcode能编译）
+    timeout-minutes: 90  # iOS依赖下载/编译耗时较长
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. 配置Xcode环境（指定兼容Flutter的版本）
+      - name: Set up Xcode 15
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.0'  # 适配Flutter 3.38.5的Xcode版本
+
+      # 2. 配置Flutter环境
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.5'
+          cache: true
+          channel: 'stable'
+
+      # 3. 初始化iOS项目（生成Xcode工程文件）
+      - name: Initialize iOS Project
+        run: |
+          # 生成iOS平台核心文件（解决xcodebuild找不到文件问题）
+          flutter create --platforms ios .
+          # 验证iOS项目文件
+          ls -la ios/Runner.xcodeproj || echo "❌ iOS项目文件生成失败"
+
+      # 4. 安装Flutter + iOS依赖
+      - name: Install Dependencies
+        run: |
+          flutter pub get
+          # 下载iOS CocoaPods依赖（关键：iOS打包必须）
+          cd ios && pod install --repo-update
+
+      # 5. 打包iOS模拟器版IPA（免证书，仅测试用）
+      - name: Build iOS Simulator IPA (Unsigned)
+        run: |
+          # 模拟器版：免签名、无需苹果开发者账号，仅能在iOS模拟器运行
+          flutter build ios --debug --simulator --no-codesign
+          # 验证模拟器产物
+          ls -la build/ios/iphoneos/ || echo "❌ 模拟器IPA打包失败"
+
+      # 6. 【可选】打包iOS真机版IPA（需苹果开发者证书）
+      - name: Build iOS Release IPA (Signed)
+        env:
+          # 从GitHub Secrets读取证书（需提前配置）
+          IOS_CERT_BASE64: ${{ secrets.IOS_CERT_BASE64 }}
+          IOS_PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+          BUNDLE_ID: "com.yourcompany.yourapp"  # 替换为你的Bundle ID
+        run: |
+          # 6.1 解码并导入苹果开发者证书
+          echo $IOS_CERT_BASE64 | base64 -d > ios_dist.p12
+          security create-keychain -p github-actions ios-build.keychain
+          security default-keychain -s ios-build.keychain
+          security unlock-keychain -p github-actions ios-build.keychain
+          security import ios_dist.p12 -k ios-build.keychain -P $CERT_PASSWORD -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -k github-actions ios-build.keychain
+
+          # 6.2 安装Provisioning Profile
+          echo $IOS_PROFILE_BASE64 | base64 -d > app.mobileprovision
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles/
+          cp app.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+
+          # 6.3 打包签名的Release IPA
+          flutter build ipa --release --bundle-identifier $BUNDLE_ID
+          # 验证Release IPA产物
+          ls -la build/ios/ipa/ || echo "❌ 真机IPA打包失败"
+
+      # 7. 上传iOS IPA产物
+      - name: Upload iOS IPA Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-ios-ipa-builds
+          path: |
+            build/ios/iphoneos/*.app
+            build/ios/ipa/*.ipa
+          retention-days: 30
+        if: always()  # 容错：即使有警告仍上传
+
+      # 8. 发布到GitHub Release（仅Tag触发时）
+      - name: Release iOS IPA
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/ios/ipa/*.ipa
+          name: iOS Release ${{ github.ref_name }}
+          body: |
+            Flutter iOS IPA 打包产物
+            - Simulator IPA：免证书，仅模拟器运行
+            - Release IPA：已签名，可安装到真机/上架TestFlight
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -51,18 +51,23 @@ jobs:
       - name: Build DEB package (AMD64)
         run: |
           # 定义版本号和应用名
-          # 修复：确保Version字段始终以数字开头（DEB包规范要求）
+          # 修复：确保Version字段仅包含字母、数字、.+-，彻底移除下划线等非法字符
           # 优先级：tag版本(去v) > 分支名+提交哈希(0.0.0-前缀) > 纯提交哈希(0.0.0-前缀)
           RAW_VERSION=${{ github.ref_name || github.sha }}
           # 处理tag版本（如v1.0.0 → 1.0.0）
           if [[ $RAW_VERSION == v* ]]; then
-            APP_VERSION=${RAW_VERSION:1}  # 去掉开头的v，符合DEB版本规范
+            # 去v后再清理非法字符（防止tag中含下划线）
+            APP_VERSION=$(echo ${RAW_VERSION:1} | sed 's/[^a-zA-Z0-9.+-]/-/g')
           else
-            # 非tag版本：强制以0.0.0开头，拼接清理后的分支名+短哈希
+            # 非tag版本：先清理分支名所有非法字符（包括下划线），再拼接短哈希
             SHA_SHORT=${{ github.sha }}
             SHA_SHORT=${SHA_SHORT:0:8}  # 截取哈希前8位，避免版本号过长
-            CLEAN_BRANCH=$(echo $RAW_VERSION | sed 's/[^a-zA-Z0-9.+-]/-/g')  # 清理非法字符
-            APP_VERSION="0.0.0_${CLEAN_BRANCH}_${SHA_SHORT}"
+            # 关键修复：彻底替换所有非合法字符为-（包括下划线、空格等）
+            CLEAN_BRANCH=$(echo $RAW_VERSION | sed 's/[^a-zA-Z0-9.+-]/-/g')
+            # 拼接版本号，确保仅含合法字符
+            APP_VERSION="0.0.0-${CLEAN_BRANCH}-${SHA_SHORT}"
+            # 二次清理：防止拼接时引入非法字符（兜底）
+            APP_VERSION=$(echo $APP_VERSION | sed 's/[^a-zA-Z0-9.+-]/-/g')
           fi
           
           APP_NAME="my_flutter_app"  # 确保包名是小写、无空格，符合DEB规范
@@ -101,6 +106,8 @@ jobs:
           
           # 构建DEB包（含架构标识）
           DEB_PACKAGE_NAME="${APP_NAME}_${APP_VERSION}_amd64.deb"
+          # 清理包名中的非法字符（兜底）
+          DEB_PACKAGE_NAME=$(echo $DEB_PACKAGE_NAME | sed 's/[^a-zA-Z0-9._-]/_/g')
           fakeroot dpkg-deb --build $DEB_ROOT $DEB_PACKAGE_NAME
           
           # 验证DEB包（可选，确保包有效）

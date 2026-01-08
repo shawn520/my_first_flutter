@@ -83,9 +83,10 @@ jobs:
       # 7. 打包未签名的Release版APK（优化编译，无签名）
       - name: Build Unsigned Release APK
         run: |
-          # --no-sign：明确指定不签名（Flutter 3.0+支持）
+          # 注：Flutter 3.38.5无需--no-sign参数，未配置签名时默认生成未签名Release APK
+          # --split-per-abi：按架构拆分APK（减小体积），可选
           # FLUTTER_WARNINGS_ARE_ERRORS=false：屏蔽剩余的跨平台配置警告
-          flutter build apk --release --no-sign --split-per-abi \
+          flutter build apk --release --split-per-abi \
             --dart-define=FLUTTER_WARNINGS_ARE_ERRORS=false
           # 验证产物：打印APK列表+确认未签名
           echo "===== Unsigned Release APK 产物 ====="

@@ -12,7 +12,6 @@ permissions:
 jobs:
   build-ubuntu-arm64-deb:
     runs-on: ubuntu-22.04
-    # 修复1：通过matrix指定ARM64架构（GitHub官方推荐写法）
     strategy:
       matrix:
         architecture: [arm64]
@@ -22,15 +21,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. 安装原生ARM64依赖（无交叉编译，极简）
+      # 1. 安装原生ARM64依赖
       - name: Install base dependencies (Native ARM64)
         run: |
           sudo apt-get update -y
-          # 原生ARM64依赖，无需任何架构适配
           sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev libssl-dev libgl1
-          # DEB打包依赖
           sudo apt-get install -y dpkg-dev fakeroot
-          # Flutter编译必需的GL依赖
           sudo apt-get install -y libglu1-mesa-dev freeglut3-dev mesa-common-dev
           sudo apt-get -f install -y
 
@@ -50,13 +46,20 @@ jobs:
       - name: Get dependencies
         run: flutter pub get
 
-      # 5. 原生编译ARM64版本（无需交叉编译，直接生成ARM64二进制）
+      # 5. 原生编译ARM64版本
       - name: Build Flutter Linux app (Native ARM64)
         run: |
-          # 原生ARM64编译，无需任何交叉编译环境变量
+          # 原生ARM64编译（产物路径为build/linux/x64）
           flutter build linux --release --dart-define=ARCH=arm64
+          # 关键：验证编译产物路径并打印架构信息
+          echo "===== 验证编译产物 ====="
+          # 打印产物目录结构
+          ls -la build/linux/
+          ls -la build/linux/x64/release/bundle/
+          # 验证二进制架构（确认是ARM64）
+          file build/linux/x64/release/bundle/my_flutter_app || true
 
-      # 6. 构建ARM64 DEB包（逻辑和AMD64一致）
+      # 6. 构建ARM64 DEB包（修复路径）
       - name: Build DEB package (ARM64)
         run: |
           # ========== 变量处理 ==========
@@ -89,7 +92,19 @@ jobs:
           CONTROL_DIR="$DEB_ROOT/DEBIAN"
           
           mkdir -p $DEB_DIR $BIN_DIR $CONTROL_DIR
-          cp -r build/linux/arm64/release/bundle/* $DEB_DIR/
+          
+          # 修复核心：原生ARM64编译产物路径是build/linux/x64（不是arm64）
+          # 先验证路径存在，再复制
+          if [ -d "build/linux/x64/release/bundle" ]; then
+            echo "✅ 找到编译产物，路径：build/linux/x64/release/bundle"
+            cp -r build/linux/x64/release/bundle/* $DEB_DIR/
+          else
+            echo "❌ 编译产物路径不存在，打印目录结构排查："
+            ls -la build/linux/
+            exit 1
+          fi
+          
+          # 创建软链接
           ln -s /opt/$APP_NAME_CLEAN/$APP_NAME_CLEAN $BIN_DIR/$APP_NAME_CLEAN
           
           # ========== 编写control文件 ==========
@@ -122,6 +137,9 @@ jobs:
           dpkg-deb -I $DEB_PACKAGE_NAME
           echo "DEB_PACKAGE_NAME=$DEB_PACKAGE_NAME" >> $GITHUB_ENV
         shell: /usr/bin/bash -e {0}
+        env:
+          FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.38.5-x64
+          PUB_CACHE: /home/runner/.pub-cache
 
       # 7. 上传ARM64 DEB包
       - name: Upload ARM64 DEB artifact
@@ -138,7 +156,6 @@ jobs:
         with:
           files: ${{ env.DEB_PACKAGE_NAME }}
           name: Release ${{ github.ref_name }}
-          # 修复2：变量引用添加env.前缀，语法正确
           body: "Native ARM64 build for Ubuntu: ${{ env.DEB_PACKAGE_NAME }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

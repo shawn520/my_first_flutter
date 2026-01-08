@@ -1,0 +1,100 @@
+name: Flutter Android Unsigned APK Build
+
+on:
+  push:
+    branches: [ main, master, optimize_ci ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-unsigned-android-apk:
+    runs-on: ubuntu-22.04  # 稳定的22.04环境，兼容所有Flutter版本
+    timeout-minutes: 45  # 非签名打包更快，缩短超时时间
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. 安装安卓基础依赖（JDK 17 + Android SDK）
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle  # 缓存Gradle依赖，加速后续构建
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3  # 自动安装安卓SDK，无需手动配置
+
+      # 2. 配置Flutter环境
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.5'
+          cache: true
+          channel: 'stable'
+
+      # 3. 初始化Flutter安卓环境（自动接受许可）
+      - name: Initialize Flutter for Android
+        run: |
+          flutter config --enable-android
+          flutter doctor --android-licenses --quiet  # 自动同意安卓SDK许可（关键）
+          flutter doctor -v  # 打印环境信息，便于排查问题
+
+      # 4. 安装Flutter项目依赖
+      - name: Install Flutter dependencies
+        run: |
+          flutter pub get
+          cd android && ./gradlew clean  # 清理安卓缓存，避免编译冲突
+
+      # 5. 打包Debug版APK（默认非签名，开发测试用）
+      - name: Build Debug APK (Unsigned)
+        run: |
+          # --split-per-abi：按架构拆分APK（减小体积），可选
+          flutter build apk --debug --split-per-abi
+          # 验证产物：打印APK列表
+          echo "===== Debug APK 产物 ====="
+          ls -la build/app/outputs/flutter-apk/
+
+      # 6. 打包未签名的Release版APK（优化编译，无签名）
+      - name: Build Unsigned Release APK
+        run: |
+          # --no-sign：明确指定不签名（Flutter 3.0+支持）
+          flutter build apk --release --no-sign --split-per-abi
+          # 验证产物：打印APK列表+确认未签名
+          echo "===== Unsigned Release APK 产物 ====="
+          ls -la build/app/outputs/flutter-apk/
+          # 检查APK签名状态（输出"No signature found"表示未签名）
+          for apk in build/app/outputs/flutter-apk/*release*.apk; do
+            echo "===== 检查APK签名：$apk ====="
+            jarsigner -verify -verbose -certs $apk || echo "✅ 该APK未签名（预期结果）"
+          done
+
+      # 7. 上传非签名APK产物（Debug + 未签名Release）
+      - name: Upload Unsigned APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-android-unsigned-apks
+          path: |
+            build/app/outputs/flutter-apk/*debug*.apk
+            build/app/outputs/flutter-apk/*release*.apk
+          retention-days: 30  # 产物保留30天
+
+      # 8. 发布到GitHub Release（仅Tag触发时）
+      - name: Release Unsigned APKs
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/app/outputs/flutter-apk/*debug*.apk
+            build/app/outputs/flutter-apk/*release*.apk
+          name: Release ${{ github.ref_name }}
+          body: |
+            Flutter 非签名安卓APK包
+            - Debug APK：含调试信息，适合开发测试
+            - Unsigned Release APK：优化编译，无签名，仅用于内部验证
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

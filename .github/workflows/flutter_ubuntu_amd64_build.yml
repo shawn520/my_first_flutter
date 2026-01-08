@@ -65,7 +65,7 @@ jobs:
             APP_VERSION="0.0.0-${CLEAN_BRANCH}-${SHA_SHORT}"
           fi
           
-          APP_NAME="my_flutter_app"
+          APP_NAME="my_flutter_app"  # 确保包名是小写、无空格，符合DEB规范
           
           # 创建DEB目录结构
           DEB_ROOT="flutter_app_deb_amd64"
@@ -82,10 +82,11 @@ jobs:
           ln -s /opt/$APP_NAME/$APP_NAME $BIN_DIR/$APP_NAME
           
           # 编写control文件（固定AMD64架构）
+          # 关键修复：control文件内不允许行内注释，注释移到脚本中
           cat > $CONTROL_DIR/control << EOF
           Package: $APP_NAME
           Version: $APP_VERSION
-          Architecture: amd64  # 关键：标识架构
+          Architecture: amd64  # 移除行内注释，仅保留纯架构名
           Maintainer: Your Name <your-email@example.com>
           Depends: libgtk-3-0:amd64, libstdc++6:amd64, libgl1-mesa-glx:amd64, libssl3:amd64
           Section: utils
@@ -105,6 +106,10 @@ jobs:
           # 验证DEB包（可选，确保包有效）
           dpkg-deb -I $DEB_PACKAGE_NAME
           echo "DEB_PACKAGE_NAME=$DEB_PACKAGE_NAME" >> $GITHUB_ENV
+        shell: /usr/bin/bash -e {0}
+        env:
+          FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.38.5-x64
+          PUB_CACHE: /home/runner/.pub-cache
 
       # 7. 上传AMD64 DEB包（按架构区分）
       - name: Upload AMD64 DEB artifact

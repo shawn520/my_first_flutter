@@ -82,11 +82,11 @@ jobs:
           ln -s /opt/$APP_NAME/$APP_NAME $BIN_DIR/$APP_NAME
           
           # 编写control文件（固定AMD64架构）
-          # 关键修复：control文件内不允许行内注释，注释移到脚本中
+          # 重要：control文件内禁止任何行内注释，仅保留纯键值对
           cat > $CONTROL_DIR/control << EOF
           Package: $APP_NAME
           Version: $APP_VERSION
-          Architecture: amd64  # 移除行内注释，仅保留纯架构名
+          Architecture: amd64
           Maintainer: Your Name <your-email@example.com>
           Depends: libgtk-3-0:amd64, libstdc++6:amd64, libgl1-mesa-glx:amd64, libssl3:amd64
           Section: utils

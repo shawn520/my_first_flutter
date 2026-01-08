@@ -62,10 +62,8 @@ jobs:
       - name: Build Debug APK (Unsigned)
         run: |
           # --split-per-abi：按架构拆分APK（减小体积），可选
-          # --no-analytics：关闭统计，减少输出
           # FLUTTER_WARNINGS_ARE_ERRORS=false：屏蔽file_picker插件的非关键警告
           flutter build apk --debug --split-per-abi \
-            --no-analytics \
             --dart-define=FLUTTER_WARNINGS_ARE_ERRORS=false
           # 验证产物：打印APK列表，确认打包成功
           echo "===== Debug APK 产物 ====="
@@ -75,9 +73,8 @@ jobs:
       - name: Build Unsigned Release APK
         run: |
           # --no-sign：明确指定不签名（Flutter 3.0+支持）
-          # 其他参数和Debug版一致，屏蔽插件警告
+          # FLUTTER_WARNINGS_ARE_ERRORS=false：屏蔽file_picker插件的非关键警告
           flutter build apk --release --no-sign --split-per-abi \
-            --no-analytics \
             --dart-define=FLUTTER_WARNINGS_ARE_ERRORS=false
           # 验证产物：打印APK列表+确认未签名
           echo "===== Unsigned Release APK 产物 ====="

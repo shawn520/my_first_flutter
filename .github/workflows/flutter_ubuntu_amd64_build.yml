@@ -109,7 +109,7 @@ jobs:
           ln -s /opt/$APP_NAME_CLEAN/$APP_NAME_CLEAN $BIN_DIR/$APP_NAME_CLEAN
           
           # ========== 第四步：编写control文件（固定AMD64架构） ==========
-          # 重要：control文件内禁止任何行内注释，仅保留纯键值对
+          # 重要：control文件内禁止任何形式的注释（#会被识别为非法字段名）
           echo -e "\n===== 生成的control文件内容 ====="
           # 核心：EOF前后无多余空格，闭合EOF与开头缩进一致（格式合规）
           cat > $CONTROL_DIR/control <<EOF
@@ -117,7 +117,6 @@ jobs:
           Version: $APP_VERSION
           Architecture: amd64
           Maintainer: Your Name <your-email@example.com>
-          # 修复：Depends字段使用通用libgl1，兼容新版Ubuntu
           Depends: libgtk-3-0:amd64, libstdc++6:amd64, libgl1:amd64, libssl3:amd64
           Section: utils
           Priority: optional

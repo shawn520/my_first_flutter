@@ -62,7 +62,7 @@ jobs:
             SHA_SHORT=${{ github.sha }}
             SHA_SHORT=${SHA_SHORT:0:8}  # 截取哈希前8位，避免版本号过长
             CLEAN_BRANCH=$(echo $RAW_VERSION | sed 's/[^a-zA-Z0-9.+-]/-/g')  # 清理非法字符
-            APP_VERSION="0.0.0-${CLEAN_BRANCH}-${SHA_SHORT}"
+            APP_VERSION="0.0.0_${CLEAN_BRANCH}_${SHA_SHORT}"
           fi
           
           APP_NAME="my_flutter_app"  # 确保包名是小写、无空格，符合DEB规范

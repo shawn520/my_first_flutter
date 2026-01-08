@@ -11,10 +11,12 @@ permissions:
 
 jobs:
   build-ubuntu-arm64-deb:
-    runs-on: ubuntu-22.04  # GitHub会自动分配ARM64的22.04 runner
-    # 关键：指定ARM64架构（GitHub会调度到ARM64机器）
-    architecture: arm64
-    timeout-minutes: 60  # 原生编译比交叉编译快，无需90分钟
+    runs-on: ubuntu-22.04
+    # 修复1：通过matrix指定ARM64架构（GitHub官方推荐写法）
+    strategy:
+      matrix:
+        architecture: [arm64]
+    timeout-minutes: 60
 
     steps:
       - name: Checkout code
@@ -136,6 +138,7 @@ jobs:
         with:
           files: ${{ env.DEB_PACKAGE_NAME }}
           name: Release ${{ github.ref_name }}
-          body: "Native ARM64 build for Ubuntu: ${{ DEB_PACKAGE_NAME }}"
+          # 修复2：变量引用添加env.前缀，语法正确
+          body: "Native ARM64 build for Ubuntu: ${{ env.DEB_PACKAGE_NAME }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

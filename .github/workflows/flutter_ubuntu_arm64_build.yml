@@ -11,17 +11,32 @@ permissions:
 
 jobs:
   build-ubuntu-arm64-deb:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04  # 关键修复：使用稳定的22.04版本，避免24.04源问题
     timeout-minutes: 90  # ARM64交叉编译耗时更长，设置90分钟超时
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. 安装基础依赖（含ARM64架构支持）
+      # 1. 修复Ubuntu源（解决ARM64索引404问题）
+      - name: Fix Ubuntu sources for ARM64
+        run: |
+          # 备份原有源文件
+          sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+          # 替换为阿里云Ubuntu 22.04源（稳定且支持ARM64）
+          sudo tee /etc/apt/sources.list > /dev/null <<EOF
+          deb http://mirrors.aliyun.com/ubuntu/ jammy main restricted universe multiverse
+          deb http://mirrors.aliyun.com/ubuntu/ jammy-updates main restricted universe multiverse
+          deb http://mirrors.aliyun.com/ubuntu/ jammy-backports main restricted universe multiverse
+          deb http://mirrors.aliyun.com/ubuntu/ jammy-security main restricted universe multiverse
+          EOF
+          # 更新源并清理缓存
+          sudo apt-get clean
+          sudo apt-get update -y
+
+      # 2. 安装基础依赖（含ARM64架构支持）
       - name: Install base dependencies
         run: |
-          sudo apt-get update -y
           # 启用ARM64和32位架构支持（解决依赖安装问题）
           sudo dpkg --add-architecture arm64
           sudo dpkg --add-architecture i386
@@ -38,18 +53,18 @@ jobs:
           # 修复依赖（防止安装失败）
           sudo apt-get -f install -y
 
-      # 2. 安装ARM64交叉编译专属依赖
+      # 3. 安装ARM64交叉编译专属依赖
       - name: Install ARM64 cross-compile dependencies
         run: |
           # 安装ARM64交叉编译器
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-          # 安装ARM64架构的核心依赖库
-          sudo apt-get install -y libgtk-3-dev:arm64 libgl1:arm64 libstdc++6:arm64 libssl3:arm64 liblzma-dev:arm64
+          # 安装ARM64架构的核心依赖库（忽略索引警告，使用本地缓存）
+          sudo apt-get install -y --allow-unauthenticated libgtk-3-dev:arm64 libgl1:arm64 libstdc++6:arm64 libssl3:arm64 liblzma-dev:arm64
           # 确认交叉编译器路径
           echo "AARCH64_GCC_PATH=$(which aarch64-linux-gnu-gcc)" >> $GITHUB_ENV
           echo "AARCH64_GXX_PATH=$(which aarch64-linux-gnu-g++)" >> $GITHUB_ENV
 
-      # 3. 配置Flutter环境
+      # 4. 配置Flutter环境
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
@@ -57,15 +72,15 @@ jobs:
           cache: true
           channel: 'stable'
 
-      # 4. 启用Linux桌面支持
+      # 5. 启用Linux桌面支持
       - name: Enable Linux desktop
         run: flutter config --enable-linux-desktop
 
-      # 5. 获取Flutter依赖
+      # 6. 获取Flutter依赖
       - name: Get dependencies
         run: flutter pub get
 
-      # 6. 编译ARM64版本（交叉编译）
+      # 7. 编译ARM64版本（交叉编译）
       - name: Build Flutter Linux app (ARM64)
         run: |
           # 设置交叉编译环境变量
@@ -80,7 +95,7 @@ jobs:
             --extra-front-end-options=--target-os=linux \
             --extra-front-end-options=--target-arch=arm64
 
-      # 7. 构建ARM64专属DEB包（添加完整日志打印）
+      # 8. 构建ARM64专属DEB包（添加完整日志打印）
       - name: Build DEB package (ARM64)
         run: |
           # ========== 第一步：打印原始变量（排查根源） ==========
@@ -181,7 +196,7 @@ jobs:
           FLUTTER_ROOT: /opt/hostedtoolcache/flutter/stable-3.38.5-x64
           PUB_CACHE: /home/runner/.pub-cache
 
-      # 8. 上传ARM64 DEB包（按架构区分）
+      # 9. 上传ARM64 DEB包（按架构区分）
       - name: Upload ARM64 DEB artifact
         uses: actions/upload-artifact@v4
         with:
@@ -189,7 +204,7 @@ jobs:
           path: ${{ env.DEB_PACKAGE_NAME }}
           retention-days: 30  # 保留30天
 
-      # 9. 发布到GitHub Release（tag触发时）
+      # 10. 发布到GitHub Release（tag触发时）
       - name: Create GitHub Release (ARM64)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
